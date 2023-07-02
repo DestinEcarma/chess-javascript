@@ -8,5 +8,8 @@
 	},
 	"author": "Destin Ecarma",
 	"license": "MIT",
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"object-sizeof": "^2.6.1"
+	}
 }

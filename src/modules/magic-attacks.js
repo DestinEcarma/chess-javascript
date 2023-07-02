@@ -1,13 +1,8 @@
 import { BitboardClass } from "./bitboard.js"
-import {
-	level_masks,
-	diagonal_masks,
-	level_squares,
-	diagonal_squares,
-	level_attacks,
-	diagonal_attacks,
-} from "./pre-moves.js"
-import { LEVEL_MAGIC_NUMBERS, DIAGONAL_MAGIC_NUMBERS, LEVEL_BITS, DIAGONAL_BITS } from "./constant-gvar.js"
+import { level_masks, diagonal_masks, level_squares, diagonal_squares } from "./pre-moves.js"
+import { LEVEL_BITS, DIAGONAL_BITS, LEVEL_MAGIC_NUMBERS, DIAGONAL_MAGIC_NUMBERS } from "./constant-gvar.js"
+import { ArrayBigIntToString } from "./helper.js"
+import Object_SizeOf from "object-sizeof"
 
 export function MaskSlidingAttaks(occupancies, target_squares) {
 	const bitboard_occupancies = new BitboardClass(occupancies)
@@ -58,7 +53,7 @@ function GenerateMagicNumber() {
 function FindMagicNumber(square_index, bits, diagonal) {
 	const occupancies = new Array(4096)
 	const attacks = new Array(4096)
-	const used_attacks = new Array(4096).fill(0n)
+	const used_attacks = new Array(4096)
 
 	const attack_mask = diagonal ? diagonal_masks[square_index] : level_masks[square_index]
 	const target_squares = diagonal ? diagonal_squares[square_index] : level_squares[square_index]
@@ -69,9 +64,7 @@ function FindMagicNumber(square_index, bits, diagonal) {
 		attacks[index] = MaskSlidingAttaks(occupancies[index], target_squares)
 	}
 
-	let fail = 0
-
-	for (let _ = 0; _ < 100000000; _++) {
+	for (let _ = 0, fail = 0; _ < 100000000; _++) {
 		const magic_number = GenerateMagicNumber()
 
 		if (BigInt(new BitboardClass((attack_mask * magic_number) & 0xff00000000000000n).CountBits()) < 6) continue
@@ -79,7 +72,7 @@ function FindMagicNumber(square_index, bits, diagonal) {
 		for (let index = 0, fail; !fail && index < occupancy_indicies; index++) {
 			const magic_index = (occupancies[index] * magic_number) >> (64n - BigInt(bits))
 
-			if (used_attacks[magic_index] === 0n) {
+			if (!used_attacks[magic_index]) {
 				used_attacks[magic_index] = attacks[index]
 			} else if (used_attacks[magic_index] !== attacks[index]) {
 				fail = 1
@@ -93,51 +86,72 @@ function FindMagicNumber(square_index, bits, diagonal) {
 	return 0n
 }
 
-export function InitSlidingAttacks(diagonal) {
-	for (let square_index = 0; square_index < 64; square_index++) {
-		const attack_mask = diagonal ? diagonal_masks[square_index] : level_masks[square_index]
-		const bits = new BitboardClass(attack_mask).CountBits()
+function Generate64ArrayMagicNumbers(print_number, bits, diagonal) {
+	const array_numbers = new Array(64)
+	const start = Date.now()
 
-		const occupancy_indicies = 1 << bits
+	for (let index = 0; index < 64; index++) {
+		const index_magic_number = FindMagicNumber(index, bits[index], diagonal)
 
-		if (level_attacks[square_index] == null) level_attacks[square_index] = []
-		if (diagonal_attacks[square_index] == null) diagonal_attacks[square_index] = []
+		if (print_number) {
+			console.log(`${index_magic_number}n,`)
+		}
 
-		for (let index = 0; index < occupancy_indicies; index++) {
-			const occupancy = IndexToUBigInt64(index, bits, attack_mask)
+		array_numbers[index] = index_magic_number
+	}
 
-			if (diagonal) {
-				const magic_index =
-					(occupancy * DIAGONAL_MAGIC_NUMBERS[square_index]) >> BigInt(64 - DIAGONAL_BITS[square_index])
+	console.log(`Generation took: ${(Date.now() - start) / 1000}s`)
+	return array_numbers
+}
 
-				diagonal_attacks[square_index][magic_index] = MaskSlidingAttaks(
-					occupancy,
-					diagonal_squares[square_index]
-				)
-			} else {
-				const magic_index =
-					(occupancy * LEVEL_MAGIC_NUMBERS[square_index]) >> BigInt(64 - LEVEL_BITS[square_index])
+function NotFoundSmallestValue(value, magic_numbers, index) {
+	return value < magic_numbers[index] && magic_numbers.findIndex((_value) => value === _value) < 0
+}
 
-				level_attacks[square_index][magic_index] = MaskSlidingAttaks(occupancy, level_squares[square_index])
+export function InitSmallestMagicNumberPossible(max_loop = 5) {
+	const level_numbers = structuredClone(LEVEL_MAGIC_NUMBERS)
+	const diagonal_numbers = structuredClone(DIAGONAL_MAGIC_NUMBERS)
+
+	for (let i = 0; i < max_loop; i++) {
+		const start = Date.now()
+		const level = Generate64ArrayMagicNumbers(false, LEVEL_BITS, false)
+		const diagonal = Generate64ArrayMagicNumbers(false, DIAGONAL_BITS, true)
+		console.log(`Generation ${i + 1} complete: ${(Date.now() - start) / 1000}s\n`)
+
+		for (let index = 0; index < 64; index++) {
+			if (NotFoundSmallestValue(level[index], level_numbers, index)) {
+				// console.log(`Smaller than ${level[index]}, ${level_numbers[index]}`)
+				level_numbers[index] = level[index]
+			}
+
+			if (NotFoundSmallestValue(diagonal[index], diagonal_numbers, index)) {
+				// console.log(`Smaller than ${diagonal[index]}, ${diagonal_numbers[index]}`)
+				diagonal_numbers[index] = diagonal[index]
 			}
 		}
 	}
+
+	console.log("\nLevel magic numbers")
+	level_numbers.forEach((magic) => {
+		console.log(`${magic}n,`)
+	})
+
+	console.log("\nDiagonal magic numbers")
+	diagonal_numbers.forEach((magic) => {
+		console.log(`${magic}n,`)
+	})
+
+	return
 }
 
-export function InitMagicNumbers() {
-	console.log("Bishop magic numbers")
-	for (let square_index = 0; square_index < 64; square_index++) {
-		console.log(
-			`${FindMagicNumber(square_index, DIAGONAL_BITS[square_index], diagonal_squares[square_index], true)}n,`
-		)
-	}
+export function InitMagicNumbers(show_numbers = false) {
+	console.log("Level magic numbers")
+	const level_numbers = Generate64ArrayMagicNumbers(show_numbers, LEVEL_BITS, false)
 
-	console.log("\nRook magic numbers")
-	const start = Date.now()
-	for (let square_index = 0; square_index < 64; square_index++) {
-		console.log(`${FindMagicNumber(square_index, LEVEL_BITS[square_index], level_squares[square_index], false)}n,`)
-	}
+	console.log("\nDiagonal magic numbers")
+	const diagonal_numbers = Generate64ArrayMagicNumbers(show_numbers, DIAGONAL_BITS, true)
+	console.log(`Diagonal size: ${Object_SizeOf(ArrayBigIntToString(diagonal_numbers))}`)
 
 	console.log("\nMagic number generation complete")
-	console.log((Date.now() - start) / 1000)
+	console.log(`Level size: ${Object_SizeOf(ArrayBigIntToString(level_numbers))}`)
 }
