@@ -44,3 +44,10 @@ export function GetMin(numbers) {
 export function GetTotal(numbers) {
 	return numbers.reduce((sum, value) => sum + value)
 }
+
+export function GetObjectSize(
+	object,
+	replacer = (_, value) => (typeof value === "bigint" ? value.toString() + "n" : value)
+) {
+	return JSON.stringify(object, replacer).length
+}

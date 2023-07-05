@@ -1,8 +1,14 @@
 import { BitboardClass } from "./bitboard.js"
-import { level_masks, diagonal_masks, level_squares, diagonal_squares } from "./pre-moves.js"
+import {
+	level_masks,
+	diagonal_masks,
+	level_squares,
+	diagonal_squares,
+	GenerateMagicAttacks,
+	diagonal_attacks,
+} from "./pre-moves.js"
 import { LEVEL_BITS, DIAGONAL_BITS, LEVEL_MAGIC_NUMBERS, DIAGONAL_MAGIC_NUMBERS } from "./constant-gvar.js"
-import { ArrayBigIntToString, GetMin, GetMax, GetMean, StopWatch, GetTotal } from "./helper.js"
-import Object_SizeOf from "object-sizeof"
+import { GetMin, GetMax, GetMean, StopWatch, GetTotal, GetObjectSize } from "./helper.js"
 
 const LEVEL_ATTACKS_AND_OCCUPANCIES = {
 	attacks: new Array(64),
@@ -144,37 +150,46 @@ function InitSliderAttacksAndOccupancies() {
 export function InitSmallestMagicNumberPossible(max_loop = 5) {
 	InitSliderAttacksAndOccupancies()
 
-	const level_numbers = structuredClone(LEVEL_MAGIC_NUMBERS)
-	const diagonal_numbers = structuredClone(DIAGONAL_MAGIC_NUMBERS)
-
 	const level_time = new Array(max_loop)
 	const diagonal_time = new Array(max_loop)
 	const generation_time = new Array(max_loop)
+
+	let level_numbers = structuredClone(LEVEL_MAGIC_NUMBERS)
+	let diagonal_numbers = structuredClone(DIAGONAL_MAGIC_NUMBERS)
+
+	const attacks = GenerateMagicAttacks(level_numbers, diagonal_numbers)
+	let level_size = GetObjectSize(attacks.level)
+	let diagonal_size = GetObjectSize(attacks.diagonal)
 
 	for (let i = 0; i < max_loop; i++) {
 		const stop_watch = StopWatch()
 		const level = Generate64ArrayMagicNumbers(false, LEVEL_BITS, false)
 		const diagonal = Generate64ArrayMagicNumbers(false, DIAGONAL_BITS, true)
-		// console.log(`Generation ${i + 1} complete: ${stop_watch()}s\n`)
 		generation_time[i] = stop_watch()
 
-		for (let index = 0; index < 64; index++) {
-			if (NotFoundSmallestValue(level[0][index], level_numbers, index)) {
-				// console.log(`Smaller than ${level[index]}, ${level_numbers[index]}`)
-				level_numbers[index] = level[0][index]
-			}
+		const _attacks = GenerateMagicAttacks(level[0], diagonal[0])
+		const _level_size = GetObjectSize(_attacks.level)
+		const _diagonal_size = GetObjectSize(_attacks.diagonal)
 
-			if (NotFoundSmallestValue(diagonal[0][index], diagonal_numbers, index)) {
-				// console.log(`Smaller than ${diagonal[index]}, ${diagonal_numbers[index]}`)
-				diagonal_numbers[index] = diagonal[0][index]
-			}
+		if (_level_size < level_size) {
+			level_numbers = level[0]
+			level_size = _level_size
+
+			console.log(`Level size: ${(_level_size / 1024).toFixed(2)}`)
+		}
+
+		if (_diagonal_size < diagonal_size) {
+			diagonal_numbers = diagonal[0]
+			diagonal_size = _diagonal_size
+
+			console.log(`Diagonal size: ${(_diagonal_size / 1024).toFixed(2)}`)
 		}
 
 		level_time[i] = level[1]
 		diagonal_time[i] = diagonal[1]
 	}
 
-	console.log(`Geneartion complete in: ${GetTotal(generation_time).toFixed(3)}s`)
+	console.log(`\nGeneartion complete in: ${GetTotal(generation_time).toFixed(3)}s`)
 	console.log(`Minimum: ${GetMin(generation_time).toFixed(3)}s`)
 	console.log(`Maximum: ${GetMax(generation_time).toFixed(3)}s`)
 	console.log(`Mean: ${GetMean(generation_time).toFixed(3)}s`)
@@ -199,12 +214,14 @@ export function InitMagicNumbers(show_numbers = false) {
 	InitSliderAttacksAndOccupancies()
 
 	console.log("Level magic numbers")
-	const level_numbers = Generate64ArrayMagicNumbers(show_numbers, LEVEL_BITS, false)
-	console.log(`Level size: ${Object_SizeOf(ArrayBigIntToString(level_numbers))}`)
+	const level_numbers = Generate64ArrayMagicNumbers(show_numbers, LEVEL_BITS, false)[0]
 
 	console.log("\nDiagonal magic numbers")
-	const diagonal_numbers = Generate64ArrayMagicNumbers(show_numbers, DIAGONAL_BITS, true)
-	console.log(`Diagonal size: ${Object_SizeOf(ArrayBigIntToString(diagonal_numbers))}`)
+	const diagonal_numbers = Generate64ArrayMagicNumbers(show_numbers, DIAGONAL_BITS, true)[0]
 
+	const attacks = GenerateMagicAttacks(level_numbers, diagonal_numbers)
+
+	console.log(`\nLevel size: ${(GetObjectSize(attacks.level) / 1024).toFixed(2)}kb`)
+	console.log(`Diagonal size: ${(GetObjectSize(attacks.diagonal) / 1024).toFixed(2)}kb`)
 	console.log("\nMagic number generation complete")
 }

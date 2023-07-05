@@ -267,3 +267,26 @@ export const level_attacks = data.level_attacks
 export const diagonal_attacks = data.diagonal_attacks
 export const not_file0_mask = data.not_file0_mask
 export const not_file7_mask = data.not_file7_mask
+
+export function GenerateMagicAttacks(level_numbers, diagonal_numbers) {
+	const level = new Array(64)
+	const diagonal = new Array(64)
+
+	for (let square_index = 0; square_index < 64; square_index++) {
+		level[square_index] = GenerateSlidingAttacks(
+			level_masks[square_index],
+			level_squares[square_index],
+			LEVEL_BITS[square_index],
+			level_numbers[square_index]
+		)
+
+		diagonal[square_index] = GenerateSlidingAttacks(
+			diagonal_masks[square_index],
+			diagonal_squares[square_index],
+			DIAGONAL_BITS[square_index],
+			diagonal_numbers[square_index]
+		)
+	}
+
+	return { level, diagonal }
+}

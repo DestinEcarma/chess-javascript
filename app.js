@@ -3,14 +3,14 @@ import { ChessEngineClass } from "./src/modules/chess-engine.js"
 
 //* Initialize magic number if need
 import { InitMagicNumbers, InitSmallestMagicNumberPossible } from "./src/modules/magic-attacks.js"
-// InitMagicNumbers(false)
-InitSmallestMagicNumberPossible(100)
+// InitMagicNumbers(true)
+// InitSmallestMagicNumberPossible(500)
 
 const chess_engine = new ChessEngineClass()
 
 chess_engine.LoadPosition()
 
-const sliding_attack = chess_engine.GetLevelAttackMask(9)
+const sliding_attack = chess_engine.GetLevelAttackMask(25)
 const test = new BitboardClass(sliding_attack)
 
 test.PrintBitboard()
