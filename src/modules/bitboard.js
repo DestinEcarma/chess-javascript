@@ -55,27 +55,26 @@ export class BitboardClass {
 		return indicies
 	}
 
-	//* This method feels slow
 	PopLSB() {
 		if (this._bitboard === 0n) return -1n
 
 		const lsb = this._bitboard & -this._bitboard
-		const lsb_index = this.GetLSBIndex(Number(lsb))
+		const lsb_index = this.GetLSBIndex(lsb)
 		this.XOr(lsb)
 
 		return lsb_index
 	}
 
 	GetLSBIndex(lsb) {
-		return Math.log2(lsb)
+		return Math.log2(Number(lsb))
 	}
 
-	CountBits() {
-		let bitboard_raw_copy = this._bitboard
+	CountBits(bitboard) {
+		let bitboard_copy = bitboard ? bitboard : this._bitboard
 		let counter = 0
 
-		for (counter; bitboard_raw_copy; counter++) {
-			bitboard_raw_copy &= bitboard_raw_copy - 1n
+		for (counter; bitboard_copy; counter++) {
+			bitboard_copy &= bitboard_copy - 1n
 		}
 
 		return counter
