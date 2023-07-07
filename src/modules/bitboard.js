@@ -92,5 +92,6 @@ export class BitboardClass {
 		}
 
 		console.log(bitboard_string)
+		console.log(`Bitboard: ${this._bitboard}n\n`)
 	}
 }

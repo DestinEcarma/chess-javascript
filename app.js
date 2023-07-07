@@ -2,18 +2,14 @@ import { BitboardClass } from "./src/modules/bitboard.js"
 import { ChessEngineClass } from "./src/modules/chess-engine.js"
 
 //* Initialize magic number if need
-import { InitMagicNumbers, InitSmallestMagicNumberPossible } from "./src/modules/magic-attacks.js"
+// import { InitMagicNumbers, InitSmallestMagicNumberPossible } from "./src/modules/magic-attacks.js"
 // InitMagicNumbers(true)
-// InitSmallestMagicNumberPossible(500)
+// InitSmallestMagicNumberPossible(10)
 
-const chess_engine = new ChessEngineClass()
+// const chess_engine = new ChessEngineClass()
 
-chess_engine.LoadPosition()
+// chess_engine.LoadPosition()
 
-const sliding_attack = chess_engine.GetLevelAttackMask(25)
-const test = new BitboardClass(sliding_attack)
-
-test.PrintBitboard()
 // chess_engine.board.occupied.PrintBitboard()
 
 // chess_engine.board.occupied.Set(40)

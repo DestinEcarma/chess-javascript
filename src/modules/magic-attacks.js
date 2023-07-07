@@ -5,7 +5,6 @@ import {
 	level_squares,
 	diagonal_squares,
 	GenerateMagicAttacks,
-	diagonal_attacks,
 } from "./pre-moves.js"
 import { LEVEL_BITS, DIAGONAL_BITS, LEVEL_MAGIC_NUMBERS, DIAGONAL_MAGIC_NUMBERS } from "./constant-gvar.js"
 import { GetMin, GetMax, GetMean, StopWatch, GetTotal, GetObjectSize } from "./helper.js"
@@ -129,10 +128,6 @@ function Generate64ArrayMagicNumbers(print_number, bits, diagonal) {
 
 	// console.log(`Generation took: ${stop_watch()}s`)
 	return [array_numbers, stop_watch()]
-}
-
-function NotFoundSmallestValue(value, magic_numbers, index) {
-	return value < magic_numbers[index] && magic_numbers.findIndex((_value) => value === _value) < 0
 }
 
 function InitSliderAttacksAndOccupancies() {
