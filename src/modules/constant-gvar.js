@@ -3,6 +3,18 @@ export const COLOR = {
 	BLACK: 1,
 }
 
+export const MOVE_INFO = {
+	ENPASSANT: 1,
+	CASTLE: 2,
+	PROMOTION: 4,
+	PROMOTION_TYPE: {
+		KNIGHT: 8,
+		BISHOP: 16,
+		ROOK: 32,
+		QUEEN: 64,
+	},
+}
+
 // prettier-ignore
 export const LEVEL_BITS = [
 	12, 11, 11, 11, 11, 11, 11, 12,

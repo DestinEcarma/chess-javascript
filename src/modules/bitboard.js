@@ -1,6 +1,6 @@
 export class BitboardClass {
-	constructor(bitboard) {
-		this._bitboard = BigInt(bitboard ?? 0)
+	constructor(bitboard = 0) {
+		this._bitboard = BigInt(bitboard)
 	}
 
 	Raw() {
@@ -44,15 +44,15 @@ export class BitboardClass {
 		return this
 	}
 
-	GetBitIndicies() {
+	GetBitIndices() {
 		const bitboard_copy = new BitboardClass(this._bitboard)
-		const indicies = []
+		const indices = []
 
 		while (bitboard_copy.Raw()) {
-			indicies.push(bitboard_copy.PopLSB())
+			indices.push(bitboard_copy.PopLSB())
 		}
 
-		return indicies
+		return indices
 	}
 
 	PopLSB() {
@@ -66,7 +66,7 @@ export class BitboardClass {
 	}
 
 	GetLSBIndex(lsb) {
-		return Math.log2(Number(lsb))
+		return Math.log2(Number(lsb ?? this._bitboard & -this._bitboard))
 	}
 
 	CountBits(bitboard) {

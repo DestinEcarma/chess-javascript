@@ -124,11 +124,11 @@ function GenerateTargetSquareSlidingPieces(square_index, file, rank) {
 
 function GenerateSlidingAttacks(mask, target_squares, relevant_bits, magic_number) {
 	const bits = new BitboardClass(mask).CountBits()
-	const occupancy_indicies = 1 << bits
+	const occupancy_indices = 1 << bits
 
 	const attacks = {}
 
-	for (let index = 0; index < occupancy_indicies; index++) {
+	for (let index = 0; index < occupancy_indices; index++) {
 		const occupancy = IndexToUBigInt64(index, bits, mask)
 		const magic_index = (occupancy * magic_number) >> BigInt(64 - relevant_bits)
 

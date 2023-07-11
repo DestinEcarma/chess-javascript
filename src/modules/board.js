@@ -90,4 +90,28 @@ export class BoardClass {
 			[COLOR.BLACK]: new BitboardClass(),
 		}
 	}
+
+	GetPawnSquareIndices(turn) {
+		return this.pawns[turn ?? this.turn].GetBitIndices()
+	}
+
+	GetKnightSquareIndices(turn) {
+		return this.knights[turn ?? this.turn].GetBitIndices()
+	}
+
+	GetBishopSquareIndices(turn) {
+		return this.bishops[turn ?? this.turn].GetBitIndices()
+	}
+
+	GetRookSquareIndices(turn) {
+		return this.rooks[turn ?? this.turn].GetBitIndices()
+	}
+
+	GetQueenSquareIndices(turn) {
+		return this.queens[turn ?? this.turn].GetBitIndices()
+	}
+
+	GetKingSquareIndex(turn) {
+		return this.king[turn ?? this.turn].GetLSBIndex()
+	}
 }

@@ -3,23 +3,19 @@ import { BoardClass } from "./board.js"
 import {
 	diagonal_attacks,
 	diagonal_masks,
+	king_masks,
 	knight_masks,
 	level_attacks,
 	level_masks,
-	not_file0_mask,
-	not_file7_mask,
+	pawn_attack_masks,
 	pawn_double_push_mask,
 } from "./pre-moves.js"
 import { DIAGONAL_MAGIC_NUMBERS, LEVEL_MAGIC_NUMBERS, DIAGONAL_BITS, LEVEL_BITS, COLOR } from "./constant-gvar.js"
+import { Move } from "./Move.js"
 
-const PAWN_DIRECTION_SHIFT = {
+const PAWN_SHIFT_DIRECTION = {
 	[COLOR.WHITE]: "LeftShift",
 	[COLOR.BLACK]: "RightShift",
-}
-
-const PAWN_NOT_FILE_CAPTURE = {
-	[COLOR.WHITE]: [not_file0_mask, not_file7_mask],
-	[COLOR.BLACK]: [not_file7_mask, not_file0_mask],
 }
 
 export class ChessEngineClass {
@@ -30,54 +26,60 @@ export class ChessEngineClass {
 	}
 
 	GetPawnPushMask() {
-		const turn = this.board.turn
-		const occupancy = this.board.occupied.Raw()
-		const shift_direction = PAWN_DIRECTION_SHIFT[turn]
+		const board = this.board
+		const turn = board.turn
+		const occupancy = board.occupied.Raw()
+		const shift_direction = PAWN_SHIFT_DIRECTION[turn]
 
-		const single_push = new BitboardClass(this.board.pawns[turn].Raw())
+		const single_push = new BitboardClass(board.pawns[turn].Raw())
 		single_push[shift_direction](8n)
 		single_push.And(~occupancy)
 
 		const double_push = new BitboardClass(single_push.Raw() & pawn_double_push_mask[turn])
-		double_push[shift_direction](8n)
+		double_push[shift_direction](8n).And(~occupancy)
 
-		return [single_push.Raw(), double_push.And(~occupancy).Raw()]
+		return { single_push, double_push }
 	}
 
-	GetPawnCaptureMask() {
-		const turn = this.board.turn
-		const pawns = new BitboardClass(this.board.pawns[turn].Raw()).Raw()
+	GetPawnCaptureMask(square_index) {
+		const board = this.board
+		const pawn_attack_mask = new BitboardClass(pawn_attack_masks[board.turn][square_index])
+		const occupancy = board.color[board.x_turn].Raw()
 
-		const left_capture = new BitboardClass(pawns)
-		const right_capture = new BitboardClass(pawns)
-		const shift_direction = PAWN_DIRECTION_SHIFT[turn]
-		const not_file = PAWN_NOT_FILE_CAPTURE[turn]
+		return pawn_attack_mask.And(occupancy)
+	}
 
-		left_capture.And(not_file[0])[shift_direction](7n)
-		right_capture.And(not_file[1])[shift_direction](9n)
+	GetPawnEnpassantMask() {
+		const board = this.board
+		const enpassant = new BitboardClass(pawn_attack_masks[board.x_turn][board.enpassant])
 
-		return left_capture.Or(right_capture.Raw()).And(this.board.color[this.board.x_turn].Raw()).Raw()
+		enpassant.And(board.color[board.turn].Raw())
+
+		return enpassant
 	}
 
 	GetKnightJumpMask(square_index) {
-		return knight_masks[square_index] & ~this.board.color[this.board.turn].Raw()
+		const board = this.board
+		return knight_masks[square_index] & ~board.color[board.turn].Raw()
 	}
 
 	GetSlidingAttackMask(square_index, masks, magic_number, bits, attacks) {
+		const board = this.board
+
 		let occupancy = this.board.occupied.Raw()
 
 		occupancy &= masks[square_index]
 		occupancy *= magic_number[square_index]
 		occupancy >>= BigInt(64 - bits[square_index])
 
-		return attacks[square_index][occupancy] & ~this.board.color[this.board.turn].Raw()
+		return new BitboardClass(attacks[square_index][occupancy] & ~board.color[board.turn].Raw())
 	}
 
-	GetLevelAttackMask(square_index) {
+	GetRookAttackMask(square_index) {
 		return this.GetSlidingAttackMask(square_index, level_masks, LEVEL_MAGIC_NUMBERS, LEVEL_BITS, level_attacks)
 	}
 
-	GetDiagonalAttackMask(square_index) {
+	GetBishopAttackMask(square_index) {
 		return this.GetSlidingAttackMask(
 			square_index,
 			diagonal_masks,
@@ -85,5 +87,66 @@ export class ChessEngineClass {
 			DIAGONAL_BITS,
 			diagonal_attacks
 		)
+	}
+
+	GetQueenAttackMask(square_index) {
+		return this.GetRookAttackMask(square_index) | this.GetBishopAttackMask(square_index)
+	}
+
+	GetKingMask(square_index) {
+		const board = this.board
+
+		return new BitboardClass(king_masks[square_index] & ~board.color[board.turn])
+	}
+
+	CalculateAttackMask() {
+		const sliding_attack_mask = new BitboardClass()
+		const pawn_capture_mask = new BitboardClass()
+		const knight_jump_mask = new BitboardClass()
+
+		const pin_ray_mask = new BitboardClass()
+		const check_ray_mask = new BitboardClass()
+
+		
+
+		return {
+			sliding_attack_mask,
+			pawn_capture_mask,
+			knight_jump_mask,
+		}
+	}
+
+	GeneratePawnMoves(moves = []) {
+		const board = this.board
+
+		const { single_push, double_push } = this.GetPawnPushMask()
+		const shift_direction = PAWN_SHIFT_DIRECTION[board.x_turn]
+
+		single_push.GetBitIndices().forEach((target_index) => {
+			//TODO: Prevent pinned attack ray and check ray
+
+			moves.push(new Move(Number(new BitboardClass(target_index)[shift_direction](8n).Raw()), target_index))
+		})
+
+		double_push.GetBitIndices().forEach((target_index) => {
+			//TODO: Prevent pinned attack ray and check ray
+
+			moves.push(new Move(Number(new BitboardClass(target_index)[shift_direction](8n).Raw()), target_index))
+		})
+
+		board.GetPawnSquareIndices().forEach((square_index) => {
+			const capture_mask = this.GetPawnCaptureMask(square_index)
+			//TODO: Prevent pinned attack ray and check ray
+
+			capture_mask.GetBitIndices().forEach((target_index) => moves.push(new Move(square_index, target_index)))
+		})
+	}
+
+	GenerateEnemyMoves() {}
+
+	GenerateAllPossibleMoves() {
+		const moves = []
+
+		return moves
 	}
 }
