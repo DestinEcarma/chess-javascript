@@ -14,6 +14,30 @@ export class BoardClass {
 		this[PIECES.QUEEN] = this.CreateSides()
 	}
 
+	MakeMove(piece, turn, start_square, target_square) {
+		const occupancies = this.occupancies
+		const ally = this.color[turn]
+		const piece_bitbaord = this[piece][turn]
+
+		occupancies.Clear(start_square)
+		occupancies.Set(target_square)
+		ally.Clear(start_square)
+		ally.Set(target_square)
+		piece_bitbaord.Clear(start_square)
+		piece_bitbaord.Set(target_square)
+	}
+
+	CapturePiece(piece, x_turn, target_square) {
+		this.occupancies.Clear(target_square)
+		this.color[x_turn].Clear(target_square)
+		this[piece][x_turn].Clear(target_square)
+	}
+
+	PromotePawn(promotion_piece, turn, square_index) {
+		this[PIECES.PAWN][turn].Clear(square_index)
+		this[promotion_piece][turn].Set(square_index)
+	}
+
 	LoadPiecePlacement(fen) {
 		let [file, rank] = [0, 7]
 

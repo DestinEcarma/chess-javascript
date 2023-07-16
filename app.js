@@ -1,5 +1,3 @@
-import { Move } from "./src/modules/Move.js"
-import { BitboardClass } from "./src/modules/bitboard.js"
 import { ChessEngineClass } from "./src/modules/chess-engine.js"
 import { StopWatch } from "./src/modules/helper.js"
 
@@ -9,18 +7,20 @@ import { StopWatch } from "./src/modules/helper.js"
 //// InitHorizontalMagicNumbers()
 
 const chess_engine = new ChessEngineClass()
-chess_engine.LoadPosition("r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ")
+chess_engine.LoadPosition("4k3/1P6/8/8/8/8/6p1/4K3 w - - 1 1")
 chess_engine.PrintBoard()
 
 const stop_watch = StopWatch()
-const moves = chess_engine.GenerateAllPossibleMoves()
+const moves_array = chess_engine.GenerateAllPossibleMoves()
 console.log(stop_watch())
 
-const test = new BitboardClass()
+const move_to_make = "b7b8n"
 
-moves.forEach((move) => {
-	test.Set(move.target_index)
+moves_array.forEach((move) => {
+	if (move.Notation() !== move_to_make) return
+	chess_engine.MakeMove(move)
 })
 
-// chess_engine.opponent_attack_mask.PrintBitboard()
-test.PrintBitboard(`Number of moves: ${moves.length}`)
+chess_engine.PrintBoard()
+
+chess_engine

@@ -30,11 +30,13 @@ import {
 	PAWN_MOVE_DIRECTION,
 	PAWN_PROMOTION_MASK,
 	PROMOTION_PIECES,
+	CASTLE_RIGHTS_ROOK_SQUARE_INDEX,
 } from "./constant-var.js"
 import { Move } from "./Move.js"
 
 export class ChessEngineClass {
 	board = new BoardClass()
+	move_history = []
 
 	turn = COLOR.WHITE
 	x_turn = COLOR.BLACK
@@ -50,6 +52,28 @@ export class ChessEngineClass {
 	in_check = false
 
 	active_king_square_index = -1
+
+	make_move_info_funcs = {
+		[MOVE_INFO.DOUBLE_PAWN_PUSH]: (turn, _, start_square) => {
+			this.enpassant = start_square - PAWN_MOVE_DIRECTION[turn]
+			return -1
+		},
+		[MOVE_INFO.ENPASSANT]: (_, x_turn, _1, target_square) => {
+			this.board.CapturePiece(PIECES.PAWN, x_turn, target_square + PAWN_MOVE_DIRECTION[x_turn])
+
+			return PIECES.PAWN
+		},
+		[MOVE_INFO.CASTLE]: (turn, _, _1, _2, side) => {
+			const indices = CASTLE_RIGHTS_ROOK_SQUARE_INDEX[side]
+			this.board.MakeMove(PIECES.ROOK, turn, indices[0], indices[1])
+
+			return -1
+		},
+		[MOVE_INFO.PROMOTION]: (turn, _, _1, target_square, promotion_piece) => {
+			this.board.PromotePawn(promotion_piece, turn, target_square)
+			return -1
+		},
+	}
 
 	LoadPosition(fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {
 		const fen_split = fen.split(" ")
@@ -474,7 +498,7 @@ export class ChessEngineClass {
 					indices[0],
 					board.occupancies.Raw(),
 					board.occupancies.Raw(),
-					"GetHorizontalEnpassantMask"
+					this.GetHorizontalEnpassantMask
 				)
 				const mask_raw = mask.Raw()
 
@@ -502,7 +526,7 @@ export class ChessEngineClass {
 			this.IsolateMaskFromCheckOrPinRay(square_index, jump_mask)
 
 			jump_mask.GetBitIndices().forEach((target_index) => {
-				moves.push(new Move(square_index, target_index, PIECES.PAWN))
+				moves.push(new Move(square_index, target_index, PIECES.KNIGHT))
 			})
 		})
 	}
@@ -511,26 +535,37 @@ export class ChessEngineClass {
 		const board = this.board
 		const turn = this.turn
 
-		const queen_indices = board.GetQueenSquareIndices(turn)
 		const ally_occupancies = ~board.color[turn].Raw()
 
-		//* Rooks and Queens moves
-		;[...board.GetRookSquareIndices(turn), ...queen_indices].forEach((square_index) => {
+		//* Rooks
+		board.GetRookSquareIndices(turn).forEach((square_index) => {
 			const rook_mask = this.GetRookAttackMask(square_index).And(ally_occupancies)
 			this.IsolateMaskFromCheckOrPinRay(square_index, rook_mask)
 
 			rook_mask.GetBitIndices().forEach((target_index) => {
-				moves.push(new Move(square_index, target_index, PIECES.PAWN))
+				moves.push(new Move(square_index, target_index, PIECES.ROOK))
 			})
 		})
 
-		//* Bishops and Queens moves
-		;[...board.GetBishopSquareIndices(turn), ...queen_indices].forEach((square_index) => {
+		//* Bishops
+		board.GetBishopSquareIndices(turn).forEach((square_index) => {
 			const bishop_mask = this.GetBishopAttackMask(square_index).And(ally_occupancies)
 			this.IsolateMaskFromCheckOrPinRay(square_index, bishop_mask)
 
 			bishop_mask.GetBitIndices().forEach((target_index) => {
-				moves.push(new Move(square_index, target_index, PIECES.PAWN))
+				moves.push(new Move(square_index, target_index, PIECES.BISHOP))
+			})
+		})
+
+		//* Queens
+		board.GetQueenSquareIndices(turn).forEach((square_index) => {
+			const queen_mask = new BitboardClass(
+				this.GetRookAttackMask(square_index).Raw() | this.GetBishopAttackMask(square_index).Raw()
+			)
+			this.IsolateMaskFromCheckOrPinRay(square_index, queen_mask.And(ally_occupancies))
+
+			queen_mask.GetBitIndices().forEach((target_index) => {
+				moves.push(new Move(square_index, target_index, PIECES.QUEEN))
 			})
 		})
 	}
@@ -551,5 +586,29 @@ export class ChessEngineClass {
 		this.GenerateSlidingMoves(moves)
 
 		return moves
+	}
+
+	MakeMove(move) {
+		const board = this.board
+		const turn = this.turn
+		const x_turn = this.x_turn
+
+		const start_square = move.start_square
+		const target_square = move.target_square
+		const move_info = move.info
+
+		const piece_captured = board.GetPieceFromSquareIndex(target_square)
+
+		if (piece_captured !== -1) {
+			board.CapturePiece(piece_captured, x_turn, target_square)
+			move.captured = piece_captured
+		}
+
+		board.MakeMove(move.piece, turn, start_square, target_square)
+		this.enpassant = -1
+		if (move_info > 0)
+			move.captured = this.make_move_info_funcs[move_info](turn, x_turn, start_square, target_square, move.type)
+
+		this.move_history.push(move)
 	}
 }

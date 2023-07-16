@@ -37,6 +37,13 @@ export const CASTLE_RIGHTS = {
 	q: 8,
 }
 
+export const CASTLE_RIGHTS_ROOK_SQUARE_INDEX = {
+	[CASTLE_RIGHTS.K]: [7, 5],
+	[CASTLE_RIGHTS.Q]: [0, 3],
+	[CASTLE_RIGHTS.k]: [63, 61],
+	[CASTLE_RIGHTS.q]: [56, 59],
+}
+
 export const CASTLE_OCCUPANCIES = [
 	[CASTLE_RIGHTS.K, 0x60n],
 	[CASTLE_RIGHTS.Q, 0xen],
@@ -91,7 +98,7 @@ export const INDEX_FROM_NOTATION = {}
 
 //* Initailize INDEX_FROM_NOTATION
 Object.entries(NOTATIONS).forEach(([index, notation]) => {
-	INDEX_FROM_NOTATION[notation] = index
+	INDEX_FROM_NOTATION[notation] = Number(index)
 })
 
 // prettier-ignore
