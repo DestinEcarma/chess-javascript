@@ -5,8 +5,16 @@ import {
 	level_squares,
 	diagonal_squares,
 	GenerateMagicAttacks,
+	horizontal_enpasant_masks,
+	horizontal_enpassant_squares,
 } from "./pre-moves.js"
-import { LEVEL_BITS, DIAGONAL_BITS, LEVEL_MAGIC_NUMBERS, DIAGONAL_MAGIC_NUMBERS } from "./constant-gvar.js"
+import {
+	LEVEL_BITS,
+	DIAGONAL_BITS,
+	LEVEL_MAGIC_NUMBERS,
+	DIAGONAL_MAGIC_NUMBERS,
+	HORIZONTAL_ENPASSANT_BITS,
+} from "./constant-var.js"
 import { GetMin, GetMax, GetMean, StopWatch, GetTotal, GetObjectSize } from "./helper.js"
 
 const LEVEL_ATTACKS_AND_OCCUPANCIES = {
@@ -19,6 +27,11 @@ const DIAGONAL_ATTACKS_AND_OCCUPANCIES = {
 	occupancies: new Array(64),
 }
 
+const HORIZONTAL_ENPASSANT_ATTACKS_AND_OCCUPANCIES = {
+	attacks: {},
+	occupancies: {},
+}
+
 export function MaskSlidingAttaks(occupancies, target_squares) {
 	const bitboard_occupancies = new BitboardClass(occupancies)
 	const bitboard_mask = new BitboardClass()
@@ -27,7 +40,7 @@ export function MaskSlidingAttaks(occupancies, target_squares) {
 		for (let target_square of target_square_list) {
 			bitboard_mask.Set(target_square)
 
-			if (bitboard_occupancies.Occupied(target_square)) break
+			if (bitboard_occupancies.isOccupied(target_square)) break
 		}
 	}
 
@@ -81,27 +94,26 @@ function GenerateAttacksAndOccupancies(square_index, bits, diagonal) {
 	return { attacks, occupancies }
 }
 
-function FindMagicNumber(square_index, bits, diagonal) {
-	const attack_mask = diagonal ? diagonal_masks[square_index] : level_masks[square_index]
-	const object = diagonal ? DIAGONAL_ATTACKS_AND_OCCUPANCIES : LEVEL_ATTACKS_AND_OCCUPANCIES
+function FindMagicNumber(square_index, bits, attack_mask, object) {
 	const number_of_bits = 1 << bits
 
 	const occupancies = object.occupancies[square_index]
 	const attacks = object.attacks[square_index]
-	const used_attacks = new Array()
+	const used_attacks = {}
 
-	for (let _ = 0, fail = 0; _ < 100000000; _++) {
+	for (let _ = 0; _ < 100000000; _++) {
 		const magic_number = GenerateMagicNumber()
+		let index, fail
 
 		if (new BitboardClass((attack_mask * magic_number) & 0xff00000000000000n).CountBits() < 6) continue
 
-		for (let index = 0, fail; !fail && index < number_of_bits; index++) {
-			const magic_index = (occupancies[index] * magic_number) >> (64n - BigInt(bits))
+		for (index = 0, fail = false; !fail && index < number_of_bits; index++) {
+			const magic_index = (occupancies[index] * magic_number) >> BigInt(64 - bits)
 
 			if (!used_attacks[magic_index]) {
 				used_attacks[magic_index] = attacks[index]
 			} else if (used_attacks[magic_index] !== attacks[index]) {
-				fail = 1
+				fail = true
 			}
 		}
 
@@ -112,12 +124,12 @@ function FindMagicNumber(square_index, bits, diagonal) {
 	return 0n
 }
 
-function Generate64ArrayMagicNumbers(print_number, bits, diagonal) {
+function Generate64ArrayMagicNumbers(print_number, bits, attack_mask, object) {
 	const array_numbers = new Array(64)
 	const stop_watch = StopWatch()
 
 	for (let index = 0; index < 64; index++) {
-		const index_magic_number = FindMagicNumber(index, bits[index], diagonal)
+		const index_magic_number = FindMagicNumber(index, bits[index], attack_mask[index], object)
 
 		if (print_number) {
 			console.log(`${index_magic_number}n,`)
@@ -126,7 +138,6 @@ function Generate64ArrayMagicNumbers(print_number, bits, diagonal) {
 		array_numbers[index] = index_magic_number
 	}
 
-	// console.log(`Generation took: ${stop_watch()}s`)
 	return [array_numbers, stop_watch()]
 }
 
@@ -158,8 +169,13 @@ export function InitSmallestMagicNumberPossible(max_loop = 5) {
 
 	for (let i = 0; i < max_loop; i++) {
 		const stop_watch = StopWatch()
-		const level = Generate64ArrayMagicNumbers(false, LEVEL_BITS, false)
-		const diagonal = Generate64ArrayMagicNumbers(false, DIAGONAL_BITS, true)
+		const level = Generate64ArrayMagicNumbers(false, LEVEL_BITS, level_masks, LEVEL_ATTACKS_AND_OCCUPANCIES)
+		const diagonal = Generate64ArrayMagicNumbers(
+			false,
+			DIAGONAL_BITS,
+			diagonal_masks,
+			DIAGONAL_ATTACKS_AND_OCCUPANCIES
+		)
 		generation_time[i] = stop_watch()
 
 		const _attacks = GenerateMagicAttacks(level[0], diagonal[0])
@@ -209,14 +225,52 @@ export function InitMagicNumbers(show_numbers = false) {
 	InitSliderAttacksAndOccupancies()
 
 	console.log("Level magic numbers")
-	const level_numbers = Generate64ArrayMagicNumbers(show_numbers, LEVEL_BITS, false)[0]
+	const level_numbers = Generate64ArrayMagicNumbers(
+		show_numbers,
+		LEVEL_BITS,
+		level_masks,
+		LEVEL_ATTACKS_AND_OCCUPANCIES
+	)[0]
 
 	console.log("\nDiagonal magic numbers")
-	const diagonal_numbers = Generate64ArrayMagicNumbers(show_numbers, DIAGONAL_BITS, true)[0]
+	const diagonal_numbers = Generate64ArrayMagicNumbers(
+		show_numbers,
+		DIAGONAL_BITS,
+		diagonal_masks,
+		DIAGONAL_ATTACKS_AND_OCCUPANCIES
+	)[0]
 
 	const attacks = GenerateMagicAttacks(level_numbers, diagonal_numbers)
 
 	console.log(`\nLevel size: ${(GetObjectSize(attacks.level) / 1024).toFixed(2)}kb`)
 	console.log(`Diagonal size: ${(GetObjectSize(attacks.diagonal) / 1024).toFixed(2)}kb`)
 	console.log("\nMagic number generation complete")
+}
+
+export function InitHorizontalMagicNumbers() {
+	for (let square_index = 24; square_index < 40; square_index++) {
+		const bits = HORIZONTAL_ENPASSANT_BITS[square_index]
+		const attack_mask = horizontal_enpasant_masks[square_index]
+		const number_of_bits = 1 << bits
+
+		const occupancies = new Array(number_of_bits)
+		const attacks = new Array(number_of_bits)
+
+		for (let index = 0; index < number_of_bits; index++) {
+			occupancies[index] = IndexToUBigInt64(index, number_of_bits, attack_mask)
+			attacks[index] = MaskSlidingAttaks(occupancies[index], horizontal_enpassant_squares[square_index] ?? [[]])
+		}
+
+		HORIZONTAL_ENPASSANT_ATTACKS_AND_OCCUPANCIES.occupancies[square_index] = occupancies
+		HORIZONTAL_ENPASSANT_ATTACKS_AND_OCCUPANCIES.attacks[square_index] = attacks
+
+		const index_magic_number = FindMagicNumber(
+			square_index,
+			bits,
+			attack_mask,
+			HORIZONTAL_ENPASSANT_ATTACKS_AND_OCCUPANCIES
+		)
+
+		console.log(`${square_index}: ${index_magic_number}n,`)
+	}
 }

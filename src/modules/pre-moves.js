@@ -1,10 +1,19 @@
 import { BitboardClass } from "./bitboard.js"
-import { DIAGONAL_MAGIC_NUMBERS, LEVEL_MAGIC_NUMBERS, COLOR, LEVEL_BITS, DIAGONAL_BITS } from "./constant-gvar.js"
+import {
+	DIAGONAL_MAGIC_NUMBERS,
+	LEVEL_MAGIC_NUMBERS,
+	COLOR,
+	LEVEL_BITS,
+	DIAGONAL_BITS,
+	PIECES,
+	HORIZONTAL_ENPASSANT_BITS,
+	HORIZONTAL_ENPASSANT_MAGIC_NUMBERS,
+} from "./constant-var.js"
 import { IndexToUBigInt64, MaskSlidingAttaks } from "./magic-attacks.js"
 
 const KNIGHT_JUMPS = [17, 15, 10, 6, -6, -10, -15, -17]
 const DIAGONAL_DIRECTION_OFFSETS = [7, -7, 9, -9]
-const LEVEL_DIRECTION_OFFSETS = [8, -8, -1, 1]
+const LEVEL_DIRECTION_OFFSETS = [-1, 1, 8, -8]
 
 function MaskPawnAttacksAndPush(square_index, file, push, left_attack, right_attack) {
 	const bitboard_attack = new BitboardClass()
@@ -39,7 +48,7 @@ function GetNumberToEdge(file, rank, decrement) {
 	const num_west = file - decrement
 	const num_east = 7 - file - decrement
 
-	const level_num_to_edge = [num_north, num_south, num_west, num_east]
+	const level_num_to_edge = [num_west, num_east, num_north, num_south]
 	const diagonal_num_to_edge = [
 		Math.min(num_north, num_west),
 		Math.min(num_south, num_east),
@@ -124,18 +133,40 @@ function GenerateTargetSquareSlidingPieces(square_index, file, rank) {
 
 function GenerateSlidingAttacks(mask, target_squares, relevant_bits, magic_number) {
 	const bits = new BitboardClass(mask).CountBits()
-	const occupancy_indices = 1 << bits
+	const indices = 1 << bits
 
 	const attacks = {}
 
-	for (let index = 0; index < occupancy_indices; index++) {
-		const occupancy = IndexToUBigInt64(index, bits, mask)
-		const magic_index = (occupancy * magic_number) >> BigInt(64 - relevant_bits)
+	for (let index = 0; index < indices; index++) {
+		const occupancies = IndexToUBigInt64(index, bits, mask)
+		const magic_index = (occupancies * magic_number) >> BigInt(64 - relevant_bits)
 
-		attacks[magic_index] = MaskSlidingAttaks(occupancy, target_squares)
+		attacks[magic_index] = MaskSlidingAttaks(occupancies, target_squares)
 	}
 
 	return attacks
+}
+
+function GenerateHorizontalEnpassantMaskAndSquares(square_index, file) {
+	const num_to_edge = [file - 1, 7 - file - 1]
+	const num_to_border = [file, 7 - file]
+	const mask = new BitboardClass()
+
+	const squares = [[], []]
+
+	for (let direction_index = 0; direction_index < 2; direction_index++) {
+		for (let n = 0; n < num_to_edge[direction_index]; n++) {
+			mask.Set(square_index + LEVEL_DIRECTION_OFFSETS[direction_index] * (n + 1))
+		}
+	}
+
+	for (let direction_index = 0; direction_index < 2; direction_index++) {
+		for (let n = 0; n < num_to_border[direction_index]; n++) {
+			squares[direction_index].push(square_index + LEVEL_DIRECTION_OFFSETS[direction_index] * (n + 1))
+		}
+	}
+
+	return { mask: mask.Raw(), squares }
 }
 
 function GeneratePreMovesData() {
@@ -147,7 +178,7 @@ function GeneratePreMovesData() {
 		[COLOR.WHITE]: 0n,
 		[COLOR.BLACK]: 0n,
 	}
-	const pawn_attack_masks = {
+	const pawn_capture_masks = {
 		[COLOR.WHITE]: new Array(64).fill(0n),
 		[COLOR.BLACK]: new Array(64).fill(0n),
 	}
@@ -162,8 +193,9 @@ function GeneratePreMovesData() {
 	const level_attacks = new Array(64)
 	const diagonal_attacks = new Array(64)
 
-	let not_file0_mask = 0n
-	let not_file7_mask = 0n
+	const horizontal_enpasant_masks = {}
+	const horizontal_enpassant_squares = {}
+	const horizontal_enpasant_attacks = {}
 
 	for (let file = 0; file < 8; file++) {
 		for (let rank = 0; rank < 8; rank++) {
@@ -176,7 +208,7 @@ function GeneratePreMovesData() {
 					const [bitboard_push, bitboard_attack] = MaskPawnAttacksAndPush(square_index, file, 8, 7, 9)
 
 					pawn_push_masks[COLOR.WHITE][square_index] = bitboard_push
-					pawn_attack_masks[COLOR.WHITE][square_index] = bitboard_attack
+					pawn_capture_masks[COLOR.WHITE][square_index] = bitboard_attack
 
 					//* Double pawn push
 					if (square_index >= 8 && square_index < 24)
@@ -188,7 +220,7 @@ function GeneratePreMovesData() {
 					const [bitboard_push, bitboard_attack] = MaskPawnAttacksAndPush(square_index, file, -8, -9, -7)
 
 					pawn_push_masks[COLOR.BLACK][square_index] = bitboard_push
-					pawn_attack_masks[COLOR.BLACK][square_index] = bitboard_attack
+					pawn_capture_masks[COLOR.BLACK][square_index] = bitboard_attack
 
 					//* Double pawn push
 					if (square_index >= 40 && square_index < 56)
@@ -227,18 +259,25 @@ function GeneratePreMovesData() {
 				DIAGONAL_MAGIC_NUMBERS[square_index]
 			)
 
-			//* Not file 0
-			if (file !== 0) not_file0_mask |= 1n << BigInt(square_index)
-
-			//* Not file 7
-			if (file !== 7) not_file7_mask |= 1n << BigInt(square_index)
+			//* Horizontal enpassant mask
+			if (square_index >= 24 && square_index < 40) {
+				const _data = GenerateHorizontalEnpassantMaskAndSquares(square_index, file)
+				horizontal_enpasant_masks[square_index] = _data.mask
+				horizontal_enpassant_squares[square_index] = _data.squares
+				horizontal_enpasant_attacks[square_index] = GenerateSlidingAttacks(
+					horizontal_enpasant_masks[square_index],
+					horizontal_enpassant_squares[square_index],
+					HORIZONTAL_ENPASSANT_BITS[square_index],
+					HORIZONTAL_ENPASSANT_MAGIC_NUMBERS[square_index]
+				)
+			}
 		}
 	}
 
 	return {
 		pawn_push_masks,
 		pawn_double_push_mask,
-		pawn_attack_masks,
+		pawn_capture_masks,
 		knight_masks,
 		king_masks,
 		level_masks,
@@ -247,8 +286,9 @@ function GeneratePreMovesData() {
 		diagonal_squares,
 		level_attacks,
 		diagonal_attacks,
-		not_file0_mask,
-		not_file7_mask,
+		horizontal_enpasant_masks,
+		horizontal_enpassant_squares,
+		horizontal_enpasant_attacks,
 	}
 }
 
@@ -256,7 +296,7 @@ const data = GeneratePreMovesData()
 
 export const pawn_push_masks = data.pawn_push_masks
 export const pawn_double_push_mask = data.pawn_double_push_mask
-export const pawn_attack_masks = data.pawn_attack_masks
+export const pawn_capture_masks = data.pawn_capture_masks
 export const knight_masks = data.knight_masks
 export const king_masks = data.king_masks
 export const level_masks = data.level_masks
@@ -265,8 +305,9 @@ export const level_squares = data.level_squares
 export const diagonal_squares = data.diagonal_squares
 export const level_attacks = data.level_attacks
 export const diagonal_attacks = data.diagonal_attacks
-export const not_file0_mask = data.not_file0_mask
-export const not_file7_mask = data.not_file7_mask
+export const horizontal_enpasant_masks = data.horizontal_enpasant_masks
+export const horizontal_enpassant_squares = data.horizontal_enpassant_squares
+export const horizontal_enpasant_attacks = data.horizontal_enpasant_attacks
 
 export function GenerateMagicAttacks(level_numbers, diagonal_numbers) {
 	const level = new Array(64)

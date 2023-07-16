@@ -1,3 +1,9 @@
+const BIT_INDICES = {}
+
+for (let index = 0n; index < 64n; index++) {
+	BIT_INDICES[1n << index] = index
+}
+
 export class BitboardClass {
 	constructor(bitboard = 0) {
 		this._bitboard = BigInt(bitboard)
@@ -15,8 +21,8 @@ export class BitboardClass {
 		return this.And(~(1n << BigInt(square_index)))
 	}
 
-	Occupied(square_index) {
-		return (this._bitboard & (1n << BigInt(square_index))) !== 0n
+	isOccupied(square_index) {
+		return this._bitboard & (1n << BigInt(square_index))
 	}
 
 	LeftShift(num) {
@@ -80,18 +86,25 @@ export class BitboardClass {
 		return counter
 	}
 
-	PrintBitboard() {
+	PrintBitboard(name) {
+		if (name) console.log(` ↓ ${name}\n`)
+
 		let bitboard_string = ""
 
 		for (let rank = 7; rank >= 0; rank--) {
 			for (let file = 0; file < 8; file++) {
-				bitboard_string += ` ${this.Occupied(rank * 8 + file) ? 1 : 0} `
+				bitboard_string += ` ${this.isOccupied(rank * 8 + file) ? 1 : 0} `
 			}
 
 			bitboard_string += "\n"
 		}
 
 		console.log(bitboard_string)
-		console.log(`Bitboard: ${this._bitboard}n\n`)
+		console.log(` ↑ Bitboard: ${this._bitboard}n\n`)
+	}
+
+	Zero() {
+		this._bitboard = 0n
+		return this
 	}
 }

@@ -1,87 +1,62 @@
 import { BitboardClass } from "./bitboard.js"
-import { COLOR } from "./constant-gvar.js"
-
-const PIECE_FULL_NAME_FROM_LETTER = {
-	k: "king",
-	p: "pawns",
-	n: "knights",
-	b: "bishops",
-	r: "rooks",
-	q: "queens",
-}
-
-const CASTLE_RIGHTS_FROM_LETTER = {
-	K: 1,
-	Q: 2,
-	k: 4,
-	q: 8,
-}
+import { COLOR, PIECES, PIECE_FROM_CHARACTER, PIECES_TYPE_FROM_VALUE } from "./constant-var.js"
 
 export class BoardClass {
-	occupied = new BitboardClass()
+	occupancies = new BitboardClass()
 	color = this.CreateSides()
 
-	king = this.CreateSides()
-	pawns = this.CreateSides()
-	knights = this.CreateSides()
-	bishops = this.CreateSides()
-	rooks = this.CreateSides()
-	queens = this.CreateSides()
+	constructor() {
+		this[PIECES.KING] = this.CreateSides()
+		this[PIECES.PAWN] = this.CreateSides()
+		this[PIECES.KNIGHT] = this.CreateSides()
+		this[PIECES.BISHOP] = this.CreateSides()
+		this[PIECES.ROOK] = this.CreateSides()
+		this[PIECES.QUEEN] = this.CreateSides()
+	}
 
-	caslte_rights = 0
-	enpassant = -1
+	LoadPiecePlacement(fen) {
+		let [file, rank] = [0, 7]
 
-	turn = COLOR.WHITE
-	x_turn = COLOR.BLACK
+		fen.split("").forEach((char) => {
+			if (char !== "/") {
+				if (isNaN(char)) {
+					const color = char === char.toUpperCase() ? COLOR.WHITE : COLOR.BLACK
+					const piece = PIECE_FROM_CHARACTER[char.toLowerCase()]
 
-	LoadPosition(fen) {
-		const fen_split = fen.split(" ")
+					const square_index = rank * 8 + file
 
-		{
-			let [file, rank] = [0, 7]
-
-			//* Generate the bitboards of every pieces from fen string
-			fen_split[0].split("").forEach((char) => {
-				if (char !== "/") {
-					if (isNaN(char)) {
-						const color = char === char.toUpperCase() ? COLOR.WHITE : COLOR.BLACK
-						const piece = PIECE_FULL_NAME_FROM_LETTER[char.toLowerCase()]
-
-						const square_index = rank * 8 + file
-
-						this[piece][color].Set(square_index)
-						this.color[color].Set(square_index)
-						this.occupied.Set(square_index)
-						file++
-					} else file += Number(char)
-				} else {
-					file = 0
-					rank--
-				}
-			})
-
-			//* Identify whose turn from fen string
-			if (fen_split[1] === "w") {
-				this.turn = COLOR.WHITE
-				this.x_turn = COLOR.BLACK
+					this[piece][color].Set(square_index)
+					this.color[color].Set(square_index)
+					this.occupancies.Set(square_index)
+					file++
+				} else file += Number(char)
 			} else {
-				this.turn = COLOR.BLACK
-				this.x_turn = COLOR.WHITE
+				file = 0
+				rank--
 			}
+		})
+	}
 
-			//* Generate castle rights from fen string
-			if (fen_split[2] !== "-") {
-				fen_split[2].split("").forEach((char) => {
-					this.caslte_rights |= CASTLE_RIGHTS_FROM_LETTER[char]
-				})
-			}
+	GetPieceFromSquareIndex(square_index) {
+		if (!this.occupancies.isOccupied(square_index)) return -1
 
-			//TODO: Generate enpassant from fen string
+		const turn = this.color[COLOR.WHITE].isOccupied(square_index) ? COLOR.WHITE : COLOR.BLACK
 
-			//TODO: Generate 50 move draw from fen string
-
-			//TODO: Forgot the other one
+		for (let piece = 0; piece < 6; piece++) {
+			if (this[piece][turn].isOccupied(square_index)) return piece
 		}
+
+		console.error(`Square index is occupied, but not found: ${square_index}`)
+	}
+
+	GetPieceTypeFromSquareIndex(square_index) {
+		const piece = this.GetPieceFromSquareIndex(square_index)
+		if (piece === -1) return false
+
+		const turn = this.color[COLOR.WHITE].isOccupied(square_index) ? COLOR.WHITE : COLOR.BLACK
+		const piece_type = PIECES_TYPE_FROM_VALUE[piece]
+
+		return turn === COLOR.WHITE ? piece_type.toUpperCase() : piece_type
 	}
 
 	CreateSides() {
@@ -91,27 +66,27 @@ export class BoardClass {
 		}
 	}
 
+	GetKingSquareIndex(turn) {
+		return this[PIECES.KING][turn].GetLSBIndex()
+	}
+
 	GetPawnSquareIndices(turn) {
-		return this.pawns[turn ?? this.turn].GetBitIndices()
+		return this[PIECES.PAWN][turn].GetBitIndices()
 	}
 
 	GetKnightSquareIndices(turn) {
-		return this.knights[turn ?? this.turn].GetBitIndices()
+		return this[PIECES.KNIGHT][turn].GetBitIndices()
 	}
 
 	GetBishopSquareIndices(turn) {
-		return this.bishops[turn ?? this.turn].GetBitIndices()
+		return this[PIECES.BISHOP][turn].GetBitIndices()
 	}
 
 	GetRookSquareIndices(turn) {
-		return this.rooks[turn ?? this.turn].GetBitIndices()
+		return this[PIECES.ROOK][turn].GetBitIndices()
 	}
 
 	GetQueenSquareIndices(turn) {
-		return this.queens[turn ?? this.turn].GetBitIndices()
-	}
-
-	GetKingSquareIndex(turn) {
-		return this.king[turn ?? this.turn].GetLSBIndex()
+		return this[PIECES.QUEEN][turn].GetBitIndices()
 	}
 }
