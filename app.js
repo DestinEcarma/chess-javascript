@@ -7,20 +7,27 @@ import { StopWatch } from "./src/modules/helper.js"
 //// InitHorizontalMagicNumbers()
 
 const chess_engine = new ChessEngineClass()
-chess_engine.LoadPosition("4k3/1P6/8/8/8/8/6p1/4K3 w - - 1 1")
+chess_engine.LoadPosition("4k3/P7/8/2Pp4/8/8/8/4K2R w K d6 1 1")
 chess_engine.PrintBoard()
 
 const stop_watch = StopWatch()
-const moves_array = chess_engine.GenerateAllPossibleMoves()
+const moves = chess_engine.GenerateAllPossibleMoves()
 console.log(stop_watch())
 
-const move_to_make = "b7b8n"
+const move_to_make = "e1g1"
 
-moves_array.forEach((move) => {
+moves.forEach((move) => {
 	if (move.Notation() !== move_to_make) return
 	chess_engine.MakeMove(move)
 })
 
 chess_engine.PrintBoard()
+chess_engine.UndoMove()
+chess_engine.PrintBoard()
 
-chess_engine
+moves.forEach((move) => {
+	if (move.Notation() !== move_to_make) return
+	chess_engine.MakeMove(move)
+})
+
+chess_engine.PrintBoard()

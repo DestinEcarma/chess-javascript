@@ -27,15 +27,38 @@ export class BoardClass {
 		piece_bitbaord.Set(target_square)
 	}
 
+	UndoMove(piece, turn, start_square, target_square) {
+		const occupancies = this.occupancies
+		const ally = this.color[turn]
+		const piece_bitbaord = this[piece][turn]
+
+		occupancies.Clear(target_square)
+		occupancies.Set(start_square)
+		ally.Clear(target_square)
+		ally.Set(start_square)
+		piece_bitbaord.Clear(target_square)
+		piece_bitbaord.Set(start_square)
+	}
+
 	CapturePiece(piece, x_turn, target_square) {
 		this.occupancies.Clear(target_square)
 		this.color[x_turn].Clear(target_square)
 		this[piece][x_turn].Clear(target_square)
 	}
 
+	UndoCapturedPiece(piece, x_turn, target_square) {
+		this.occupancies.Set(target_square)
+		this.color[x_turn].Set(target_square)
+		this[piece][x_turn].Set(target_square)
+	}
+
 	PromotePawn(promotion_piece, turn, square_index) {
 		this[PIECES.PAWN][turn].Clear(square_index)
 		this[promotion_piece][turn].Set(square_index)
+	}
+
+	UndoPromotion(promotion_piece, turn, square_index) {
+		this[promotion_piece][turn].Clear(square_index)
 	}
 
 	LoadPiecePlacement(fen) {

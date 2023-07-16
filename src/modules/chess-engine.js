@@ -75,6 +75,24 @@ export class ChessEngineClass {
 		},
 	}
 
+	undo_move_info_funcs = {
+		[MOVE_INFO.DOUBLE_PAWN_PUSH]: () => {},
+		[MOVE_INFO.ENPASSANT]: (_, x_turn, _1, target_square) => {
+			this.board.UndoCapturedPiece(PIECES.PAWN, x_turn, target_square + PAWN_MOVE_DIRECTION[x_turn])
+
+			return PIECES.PAWN
+		},
+		[MOVE_INFO.CASTLE]: (turn, _, _1, _2, side) => {
+			const indices = CASTLE_RIGHTS_ROOK_SQUARE_INDEX[side]
+			this.board.UndoMove(PIECES.ROOK, turn, indices[0], indices[1])
+
+			return -1
+		},
+		[MOVE_INFO.PROMOTION]: (turn, _, _1, target_square, promotion_piece) => {
+			this.board.UndoPromotion(promotion_piece, turn, target_square)
+		},
+	}
+
 	LoadPosition(fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") {
 		const fen_split = fen.split(" ")
 
@@ -599,16 +617,47 @@ export class ChessEngineClass {
 
 		const piece_captured = board.GetPieceFromSquareIndex(target_square)
 
+		move.enpassant = this.enpassant
+		move.caslte_rights = this.caslte_rights
+		this.enpassant = -1
+
 		if (piece_captured !== -1) {
 			board.CapturePiece(piece_captured, x_turn, target_square)
 			move.captured = piece_captured
 		}
 
 		board.MakeMove(move.piece, turn, start_square, target_square)
-		this.enpassant = -1
 		if (move_info > 0)
 			move.captured = this.make_move_info_funcs[move_info](turn, x_turn, start_square, target_square, move.type)
 
 		this.move_history.push(move)
+		this.turn = x_turn
+		this.x_turn = turn
+	}
+
+	UndoMove() {
+		const move_history = this.move_history
+		if (move_history.length === 0) return
+
+		const move = move_history.pop()
+
+		const board = this.board
+		const turn = this.x_turn
+		const x_turn = this.turn
+
+		const start_square = move.start_square
+		const target_square = move.target_square
+		const move_info = move.info
+		const piece_captured = move.captured
+
+		board.UndoMove(move.piece, turn, start_square, target_square)
+		if (move_info > 0) {
+			this.undo_move_info_funcs[move_info](turn, x_turn, start_square, target_square, move.type)
+		} else if (piece_captured !== -1) board.UndoCapturedPiece(piece_captured, x_turn)
+
+		this.turn = turn
+		this.x_turn = x_turn
+		this.enpassant = move.enpassant
+		this.caslte_rights = move.caslte_rights
 	}
 }
