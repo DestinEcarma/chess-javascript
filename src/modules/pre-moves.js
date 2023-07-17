@@ -141,7 +141,7 @@ function GenerateSlidingAttacks(mask, target_squares, relevant_bits, magic_numbe
 		const occupancies = IndexToUBigInt64(index, bits, mask)
 		const magic_index = (occupancies * magic_number) >> BigInt(64 - relevant_bits)
 
-		attacks[magic_index] = MaskSlidingAttaks(occupancies, target_squares)
+		attacks[occupancies] = MaskSlidingAttaks(occupancies, target_squares)
 	}
 
 	return attacks

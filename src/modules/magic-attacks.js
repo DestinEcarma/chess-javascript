@@ -95,19 +95,17 @@ function GenerateAttacksAndOccupancies(square_index, bits, diagonal) {
 }
 
 function FindMagicNumber(square_index, bits, attack_mask, object) {
-	const number_of_bits = 1 << bits
-
 	const occupancies = object.occupancies[square_index]
 	const attacks = object.attacks[square_index]
 	const used_attacks = {}
 
 	for (let _ = 0; _ < 100000000; _++) {
 		const magic_number = GenerateMagicNumber()
-		let index, fail
+		let fail = false
 
 		if (new BitboardClass((attack_mask * magic_number) & 0xff00000000000000n).CountBits() < 6) continue
 
-		for (index = 0, fail = false; !fail && index < number_of_bits; index++) {
+		for (let index = 0; !fail && index < attacks.length; index++) {
 			const magic_index = (occupancies[index] * magic_number) >> BigInt(64 - bits)
 
 			if (!used_attacks[magic_index]) {

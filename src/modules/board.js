@@ -28,16 +28,7 @@ export class BoardClass {
 	}
 
 	UndoMove(piece, turn, start_square, target_square) {
-		const occupancies = this.occupancies
-		const ally = this.color[turn]
-		const piece_bitbaord = this[piece][turn]
-
-		occupancies.Clear(target_square)
-		occupancies.Set(start_square)
-		ally.Clear(target_square)
-		ally.Set(start_square)
-		piece_bitbaord.Clear(target_square)
-		piece_bitbaord.Set(start_square)
+		this.MakeMove(piece, turn, target_square, start_square)
 	}
 
 	CapturePiece(piece, x_turn, target_square) {
