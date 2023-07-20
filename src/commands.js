@@ -66,20 +66,20 @@ function perft(params) {
 	const depth = params.shift()
 	const fen = params && params.length > 0 ? params.reduce((prev, string) => `${prev} ${string}`) : "current"
 
-	if (isNaN(depth)) return console.log("Invalid parameters!")
+	if (isNaN(depth)) return console.log("Invalid argument: depth is not a number!")
 	if (fen !== "current") {
-		if (!isFenStringValid(fen)) return console.log("Invalid fen string!")
+		if (!isFenStringValid(fen)) return console.log("Invalid argument: invalid fen string!")
 		benchmark.chess_engine.LoadPosition(fen)
 	}
 
 	benchmark.Perft(Number(depth))
 }
 
-function position(params) {
-	if (!params) console.log("Invalid parameters!")
+function fen(params) {
+	if (!params || params.length === 0) return console.log("Invalid argument: invalid fen string!")
 	const fen = params.reduce((prev, string) => `${prev} ${string}`)
 
-	if (!isFenStringValid(fen)) console.log("Invalid fen string!")
+	if (!isFenStringValid(fen)) return console.log("Invalid argument: invalid fen string!")
 	benchmark.chess_engine.LoadPosition(fen)
 }
 
@@ -87,11 +87,20 @@ function display() {
 	benchmark.chess_engine.PrintBoard()
 }
 
+function help() {
+	// prettier-ignore
+	console.log("perft [depth] [fenstring?] : Count's all the nodes of the given depth from current or given fenstring.")
+	console.log("fen [fenstring]            : Setup the board from the given fenstring.")
+	console.log("display                    : Display's the current board state.")
+	console.log("exit                       : Stop's the current runtime.")
+}
+
 export let RUNNING = true
 
 export const COMMANDS = {
-	["position fen"]: position,
-	["go perft"]: perft,
-	["exit"]: exit,
-	["d"]: display,
+	display,
+	perft,
+	exit,
+	help,
+	fen,
 }
