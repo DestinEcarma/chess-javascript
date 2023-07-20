@@ -1,7 +1,7 @@
-import { MOVE_INFO } from "./constant-var.js"
-import { NOTATIONS, PIECES_TYPE_FROM_VALUE } from "./constant-var.js"
+const { MOVE_INFO } = require("./constant-var")
+const { NOTATIONS, PIECE_TYPE_FROM_VALUE } = require("./constant-var")
 
-export class Move {
+class Move {
 	enpassant = -1
 	captured = -1
 	castle_rights = 0
@@ -16,7 +16,9 @@ export class Move {
 
 	Notation() {
 		return `${NOTATIONS[this.start_square]}${NOTATIONS[this.target_square]}${
-			this.info === MOVE_INFO.PROMOTION ? PIECES_TYPE_FROM_VALUE[this.type] : ""
+			this.info === MOVE_INFO.PROMOTION ? PIECE_TYPE_FROM_VALUE[this.type] : ""
 		}`
 	}
 }
+
+module.exports = { Move }

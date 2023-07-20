@@ -1,9 +1,9 @@
-export const COLOR = {
+const COLOR = {
 	WHITE: 0,
 	BLACK: 1,
 }
 
-export const PIECES = {
+const PIECES = {
 	KING: 0,
 	PAWN: 1,
 	KNIGHT: 2,
@@ -12,7 +12,7 @@ export const PIECES = {
 	QUEEN: 5,
 }
 
-export const PIECE_FROM_CHARACTER = {
+const PIECE_FROM_CHARACTER = {
 	k: PIECES.KING,
 	p: PIECES.PAWN,
 	n: PIECES.KNIGHT,
@@ -21,7 +21,7 @@ export const PIECE_FROM_CHARACTER = {
 	q: PIECES.QUEEN,
 }
 
-export const PIECES_TYPE_FROM_VALUE = {
+const PIECE_TYPE_FROM_VALUE = {
 	[PIECES.KING]: "k",
 	[PIECES.PAWN]: "p",
 	[PIECES.KNIGHT]: "n",
@@ -30,40 +30,40 @@ export const PIECES_TYPE_FROM_VALUE = {
 	[PIECES.QUEEN]: "q",
 }
 
-export const CASTLE_RIGHTS = {
+const CASTLE_RIGHTS = {
 	K: 1,
 	Q: 2,
 	k: 4,
 	q: 8,
 }
 
-export const CASLTE_ROOK_POSITIONS = {
+const CASLTE_ROOK_POSITIONS = {
 	[CASTLE_RIGHTS.K]: 0x80n,
 	[CASTLE_RIGHTS.Q]: 0x1n,
 	[CASTLE_RIGHTS.k]: 0x8000000000000000n,
 	[CASTLE_RIGHTS.q]: 0x100000000000000n,
 }
 
-export const CASTLE_KING_MOVED = {
+const CASTLE_KING_MOVED = {
 	[COLOR.WHITE]: [~CASTLE_RIGHTS.K, ~CASTLE_RIGHTS.Q],
 	[COLOR.BLACK]: [~CASTLE_RIGHTS.k, ~CASTLE_RIGHTS.q],
 }
 
-export const CASTLE_ROOK_MOVED = {
+const CASTLE_ROOK_MOVED = {
 	7: CASTLE_RIGHTS.K,
 	0: CASTLE_RIGHTS.Q,
 	63: CASTLE_RIGHTS.k,
 	56: CASTLE_RIGHTS.q,
 }
 
-export const CASTLE_RIGHTS_ROOK_SQUARE_INDEX = {
+const CASTLE_RIGHTS_ROOK_SQUARE_INDEX = {
 	[CASTLE_RIGHTS.K]: [7, 5],
 	[CASTLE_RIGHTS.Q]: [0, 3],
 	[CASTLE_RIGHTS.k]: [63, 61],
 	[CASTLE_RIGHTS.q]: [56, 59],
 }
 
-export const CASTLE_EMPTY_OCCUPANCIES = {
+const CASTLE_EMPTY_OCCUPANCIES = {
 	[COLOR.WHITE]: [
 		[CASTLE_RIGHTS.K, 0x60n],
 		[CASTLE_RIGHTS.Q, 0xen],
@@ -74,38 +74,38 @@ export const CASTLE_EMPTY_OCCUPANCIES = {
 	],
 }
 
-export const CASTLE_ATTACKED_MASK = {
+const CASTLE_ATTACKED_MASK = {
 	[CASTLE_RIGHTS.K]: 0x60n,
 	[CASTLE_RIGHTS.Q]: 0xcn,
 	[CASTLE_RIGHTS.k]: 0x6000000000000000n,
 	[CASTLE_RIGHTS.q]: 0xc00000000000000n,
 }
 
-export const CASTLE_SQUARE_INDEX = {
+const CASTLE_SQUARE_INDEX = {
 	[CASTLE_RIGHTS.K]: 6,
 	[CASTLE_RIGHTS.Q]: 2,
 	[CASTLE_RIGHTS.k]: 62,
 	[CASTLE_RIGHTS.q]: 58,
 }
 
-export const PROMOTION_PIECES = [PIECES.QUEEN, PIECES.ROOK, PIECES.BISHOP, PIECES.KNIGHT]
+const PROMOTION_PIECES = [PIECES.QUEEN, PIECES.ROOK, PIECES.BISHOP, PIECES.KNIGHT]
 
-export const PAWN_SHIFT_DIRECTION = {
+const PAWN_SHIFT_DIRECTION = {
 	[COLOR.WHITE]: "LeftShift",
 	[COLOR.BLACK]: "RightShift",
 }
 
-export const PAWN_MOVE_DIRECTION = {
+const PAWN_MOVE_DIRECTION = {
 	[COLOR.WHITE]: 8,
 	[COLOR.BLACK]: -8,
 }
 
-export const PAWN_PROMOTION_MASK = {
+const PAWN_PROMOTION_MASK = {
 	[COLOR.WHITE]: 0xff00000000000000n,
 	[COLOR.BLACK]: 0xffn,
 }
 
-export const MOVE_INFO = {
+const MOVE_INFO = {
 	DOUBLE_PAWN_PUSH: 1,
 	ENPASSANT: 2,
 	CASTLE: 4,
@@ -113,7 +113,7 @@ export const MOVE_INFO = {
 }
 
 // prettier-ignore
-export const NOTATIONS = [
+const NOTATIONS = [
 	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
 	"a2", "b2", "c2", "d2", "e2", "f2", "g2", "h2",
 	"a3", "b3", "c3", "d3", "e3", "f3", "g3", "h3",
@@ -124,7 +124,7 @@ export const NOTATIONS = [
 	"a8", "b8", "c8", "d8", "e8", "f8", "g8", "h8",
 ]
 
-export const INDEX_FROM_NOTATION = {}
+const INDEX_FROM_NOTATION = {}
 
 //* Initailize INDEX_FROM_NOTATION
 Object.entries(NOTATIONS).forEach(([index, notation]) => {
@@ -132,7 +132,7 @@ Object.entries(NOTATIONS).forEach(([index, notation]) => {
 })
 
 // prettier-ignore
-export const LEVEL_BITS = [
+const LEVEL_BITS = [
 	12, 11, 11, 11, 11, 11, 11, 12,
 	11, 10, 10, 10, 10, 10, 10, 11,
 	11, 10, 10, 10, 10, 10, 10, 11,
@@ -143,7 +143,7 @@ export const LEVEL_BITS = [
 	12, 11, 11, 11, 11, 11, 11, 12
 ]
 // prettier-ignore
-export const DIAGONAL_BITS = [
+const DIAGONAL_BITS = [
 	6, 5, 5, 5, 5, 5, 5, 6,
 	5, 5, 5, 5, 5, 5, 5, 5,
 	5, 5, 7, 7, 7, 7, 5, 5,
@@ -155,7 +155,7 @@ export const DIAGONAL_BITS = [
 ]
 
 // prettier-ignore
-export const HORIZONTAL_ENPASSANT_BITS = [
+const HORIZONTAL_ENPASSANT_BITS = [
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0,
@@ -166,7 +166,7 @@ export const HORIZONTAL_ENPASSANT_BITS = [
 	0, 0, 0, 0, 0, 0, 0, 0
 ]
 
-export const LEVEL_MAGIC_NUMBERS = [
+const LEVEL_MAGIC_NUMBERS = [
 	144115462953844736n,
 	4690500116048642048n,
 	11531466897422422144n,
@@ -233,7 +233,7 @@ export const LEVEL_MAGIC_NUMBERS = [
 	72093054398365768n,
 ]
 
-export const DIAGONAL_MAGIC_NUMBERS = [
+const DIAGONAL_MAGIC_NUMBERS = [
 	1153203563835432980n,
 	4614431501109493760n,
 	289778496039813128n,
@@ -300,7 +300,7 @@ export const DIAGONAL_MAGIC_NUMBERS = [
 	589976498990219269n,
 ]
 
-export const HORIZONTAL_ENPASSANT_MAGIC_NUMBERS = {
+const HORIZONTAL_ENPASSANT_MAGIC_NUMBERS = {
 	24: 26942329847808n,
 	25: 1760045420513284n,
 	26: 5044594603475664962n,
@@ -317,4 +317,32 @@ export const HORIZONTAL_ENPASSANT_MAGIC_NUMBERS = {
 	37: 4611791574238495809n,
 	38: 9007216501997568n,
 	39: 4701762752635469824n,
+}
+
+module.exports = {
+	COLOR,
+	PIECES,
+	PIECE_FROM_CHARACTER,
+	PIECE_TYPE_FROM_VALUE,
+	CASTLE_RIGHTS,
+	CASLTE_ROOK_POSITIONS,
+	CASTLE_KING_MOVED,
+	CASTLE_ROOK_MOVED,
+	CASTLE_RIGHTS_ROOK_SQUARE_INDEX,
+	CASTLE_EMPTY_OCCUPANCIES,
+	CASTLE_ATTACKED_MASK,
+	CASTLE_SQUARE_INDEX,
+	PROMOTION_PIECES,
+	PAWN_SHIFT_DIRECTION,
+	PAWN_MOVE_DIRECTION,
+	PAWN_PROMOTION_MASK,
+	MOVE_INFO,
+	NOTATIONS,
+	INDEX_FROM_NOTATION,
+	LEVEL_BITS,
+	DIAGONAL_BITS,
+	HORIZONTAL_ENPASSANT_BITS,
+	LEVEL_MAGIC_NUMBERS,
+	DIAGONAL_MAGIC_NUMBERS,
+	HORIZONTAL_ENPASSANT_MAGIC_NUMBERS,
 }

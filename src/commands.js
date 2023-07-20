@@ -1,4 +1,6 @@
-import { Benchmark } from "./benchmark.js"
+const { Benchmark } = require("./benchmark")
+
+const RUNNER = { value: true }
 
 const benchmark = new Benchmark()
 
@@ -11,7 +13,7 @@ const VALID_ENPASSANT = [
 const VALID_CASTLE_RIGHTS = ["K", "Q", "k", "q"]
 
 function exit() {
-	RUNNING = false
+	RUNNER.value = false
 }
 
 function isFenStringValid(fen) {
@@ -95,12 +97,12 @@ function help() {
 	console.log("exit                       : Stop's the current runtime.")
 }
 
-export let RUNNING = true
-
-export const COMMANDS = {
+const COMMANDS = {
 	display,
 	perft,
 	exit,
 	help,
 	fen,
 }
+
+module.exports = { COMMANDS, RUNNER }

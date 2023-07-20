@@ -1,21 +1,23 @@
-import { BitboardClass } from "./bitboard.js"
-import {
+const { BitboardClass } = require("./bitboard")
+const {
 	level_masks,
 	diagonal_masks,
 	level_squares,
 	diagonal_squares,
-	GenerateMagicAttacks,
 	horizontal_enpasant_masks,
 	horizontal_enpassant_squares,
-} from "./pre-moves.js"
-import {
+	IndexToUBigInt64,
+	MaskSlidingAttaks,
+	GenerateMagicAttacks,
+} = require("./pre-moves")
+const {
 	LEVEL_BITS,
 	DIAGONAL_BITS,
 	LEVEL_MAGIC_NUMBERS,
 	DIAGONAL_MAGIC_NUMBERS,
 	HORIZONTAL_ENPASSANT_BITS,
-} from "./constant-var.js"
-import { GetMin, GetMax, GetMean, StopWatch, GetTotal, GetObjectSize } from "./helper.js"
+} = require("./constant-var")
+const { GetMin, GetMax, GetMean, StopWatch, GetTotal, GetObjectSize } = require("./helper")
 
 const LEVEL_ATTACKS_AND_OCCUPANCIES = {
 	attacks: new Array(64),
@@ -30,35 +32,6 @@ const DIAGONAL_ATTACKS_AND_OCCUPANCIES = {
 const HORIZONTAL_ENPASSANT_ATTACKS_AND_OCCUPANCIES = {
 	attacks: {},
 	occupancies: {},
-}
-
-export function MaskSlidingAttaks(occupancies, target_squares) {
-	const bitboard_occupancies = new BitboardClass(occupancies)
-	const bitboard_mask = new BitboardClass()
-
-	for (let target_square_list of target_squares) {
-		for (let target_square of target_square_list) {
-			bitboard_mask.Set(target_square)
-
-			if (bitboard_occupancies.isOccupied(target_square)) break
-		}
-	}
-
-	return bitboard_mask.Raw()
-}
-
-export function IndexToUBigInt64(index, bits, mask) {
-	const bitboard_mask = new BitboardClass(mask)
-
-	let result = new BitboardClass()
-
-	for (let i = 0; i < bits; i++) {
-		const square = bitboard_mask.PopLSB()
-
-		if (index & (1 << i)) result.Or(1n << BigInt(square))
-	}
-
-	return result.Raw()
 }
 
 function GenerateUInt16() {
@@ -151,7 +124,7 @@ function InitSliderAttacksAndOccupancies() {
 	}
 }
 
-export function InitSmallestMagicNumberPossible(max_loop = 5) {
+function InitSmallestMagicNumberPossible(max_loop = 5) {
 	InitSliderAttacksAndOccupancies()
 
 	const level_time = new Array(max_loop)
@@ -219,7 +192,7 @@ export function InitSmallestMagicNumberPossible(max_loop = 5) {
 	return
 }
 
-export function InitMagicNumbers(show_numbers = false) {
+function InitMagicNumbers(show_numbers = false) {
 	InitSliderAttacksAndOccupancies()
 
 	console.log("Level magic numbers")
@@ -245,7 +218,7 @@ export function InitMagicNumbers(show_numbers = false) {
 	console.log("\nMagic number generation complete")
 }
 
-export function InitHorizontalMagicNumbers() {
+function InitHorizontalMagicNumbers() {
 	for (let square_index = 24; square_index < 40; square_index++) {
 		const bits = HORIZONTAL_ENPASSANT_BITS[square_index]
 		const attack_mask = horizontal_enpasant_masks[square_index]
@@ -271,4 +244,12 @@ export function InitHorizontalMagicNumbers() {
 
 		console.log(`${square_index}: ${index_magic_number}n,`)
 	}
+}
+
+module.exports = {
+	MaskSlidingAttaks,
+	IndexToUBigInt64,
+	InitSmallestMagicNumberPossible,
+	InitMagicNumbers,
+	InitHorizontalMagicNumbers,
 }

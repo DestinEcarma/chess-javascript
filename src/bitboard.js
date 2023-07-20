@@ -4,7 +4,7 @@ for (let index = 0n; index < 64n; index++) {
 	BIT_INDICES[1n << index] = index
 }
 
-export class BitboardClass {
+class BitboardClass {
 	constructor(bitboard = 0) {
 		this._bitboard = BigInt(bitboard)
 	}
@@ -108,3 +108,5 @@ export class BitboardClass {
 		return this
 	}
 }
+
+module.exports = { BitboardClass }

@@ -1,7 +1,7 @@
-import { BitboardClass } from "./bitboard.js"
-import { COLOR, PIECES, PIECE_FROM_CHARACTER, PIECES_TYPE_FROM_VALUE } from "./constant-var.js"
+const { BitboardClass } = require("./bitboard")
+const { COLOR, PIECES, PIECE_FROM_CHARACTER, PIECE_TYPE_FROM_VALUE } = require("./constant-var")
 
-export class BoardClass {
+class BoardClass {
 	occupancies = new BitboardClass()
 	color = this.CreateSides()
 
@@ -105,7 +105,7 @@ export class BoardClass {
 		if (piece === -1) return false
 
 		const turn = this.color[COLOR.WHITE].isOccupied(square_index) ? COLOR.WHITE : COLOR.BLACK
-		const piece_type = PIECES_TYPE_FROM_VALUE[piece]
+		const piece_type = PIECE_TYPE_FROM_VALUE[piece]
 
 		return turn === COLOR.WHITE ? piece_type.toUpperCase() : piece_type
 	}
@@ -141,3 +141,5 @@ export class BoardClass {
 		return this[PIECES.QUEEN][turn].GetBitIndices()
 	}
 }
+
+module.exports = { BoardClass }

@@ -1,11 +1,11 @@
-import { ChessEngineClass } from "./chess-engine.js"
-import { StopWatch } from "./helper.js"
+const { ChessEngineClass } = require("./chess-engine")
+const { StopWatch } = require("./helper")
 
 async function PrintNotationNodes(notation, nodes) {
 	console.log(`${notation}: ${nodes}`)
 }
 
-export class Benchmark {
+class Benchmark {
 	constructor() {
 		this.chess_engine = new ChessEngineClass()
 		this.chess_engine.LoadPosition()
@@ -54,3 +54,5 @@ export class Benchmark {
 		return nodes
 	}
 }
+
+module.exports = { Benchmark }

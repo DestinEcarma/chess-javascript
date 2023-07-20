@@ -1,6 +1,6 @@
-import { BitboardClass } from "./bitboard.js"
-import { BoardClass } from "./board.js"
-import {
+const { BitboardClass } = require("./bitboard")
+const { BoardClass } = require("./board")
+const {
 	diagonal_attacks,
 	diagonal_masks,
 	horizontal_enpasant_attacks,
@@ -11,8 +11,8 @@ import {
 	level_masks,
 	pawn_capture_masks,
 	pawn_double_push_mask,
-} from "./pre-moves.js"
-import {
+} = require("./pre-moves")
+const {
 	DIAGONAL_MAGIC_NUMBERS,
 	LEVEL_MAGIC_NUMBERS,
 	DIAGONAL_BITS,
@@ -35,10 +35,10 @@ import {
 	CASTLE_ATTACKED_MASK,
 	CASLTE_ROOK_POSITIONS,
 	CASTLE_KING_MOVED,
-} from "./constant-var.js"
-import { Move } from "./Move.js"
+} = require("./constant-var")
+const { Move } = require("./Move")
 
-export class ChessEngineClass {
+class ChessEngineClass {
 	board = new BoardClass()
 	move_history = []
 
@@ -719,3 +719,5 @@ export class ChessEngineClass {
 		this.caslte_rights = move.caslte_rights
 	}
 }
+
+module.exports = { ChessEngineClass }
