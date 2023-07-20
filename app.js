@@ -1,10 +1,10 @@
 //* Initialize magic number if need
-// import { InitMagicNumbers, InitHorizontalMagicNumbers } from "./src/modules/magic-attacks.js"
+// import { InitMagicNumbers, InitHorizontalMagicNumbers } from "./src/magic-attacks.js"
 // InitMagicNumbers(true)
 //// InitHorizontalMagicNumbers()
 
 import ps from "prompt-sync"
-import { COMMANDS, RUNNING } from "./src/modules/commands.js"
+import { COMMANDS, RUNNING } from "./src/commands.js"
 const prompt = ps()
 
 while (RUNNING) {
