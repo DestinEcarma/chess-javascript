@@ -31,8 +31,10 @@ import {
 	PAWN_PROMOTION_MASK,
 	PROMOTION_PIECES,
 	CASTLE_RIGHTS_ROOK_SQUARE_INDEX,
-	CASTLE_PIECE_MOVED,
+	CASTLE_ROOK_MOVED,
 	CASTLE_ATTACKED_MASK,
+	CASLTE_ROOK_POSITIONS,
+	CASTLE_KING_MOVED,
 } from "./constant-var.js"
 import { Move } from "./Move.js"
 
@@ -48,7 +50,7 @@ export class ChessEngineClass {
 
 	opponent_attack_mask = new BitboardClass()
 	check_ray_mask = new BitboardClass()
-	pin_ray_mask = new BitboardClass()
+	pin_rays = []
 
 	double_check = false
 	in_check = false
@@ -56,42 +58,33 @@ export class ChessEngineClass {
 	active_king_square_index = -1
 
 	make_move_info_funcs = {
-		[MOVE_INFO.DOUBLE_PAWN_PUSH]: (turn, _, target_square) => {
-			this.enpassant = target_square - PAWN_MOVE_DIRECTION[turn]
-			return -1
+		[MOVE_INFO.DOUBLE_PAWN_PUSH]: (turn, _, move) => {
+			this.enpassant = move.target_square - PAWN_MOVE_DIRECTION[turn]
 		},
-		[MOVE_INFO.ENPASSANT]: (_, x_turn, target_square) => {
-			this.board.CapturePiece(PIECES.PAWN, x_turn, target_square + PAWN_MOVE_DIRECTION[x_turn])
-
-			return PIECES.PAWN
+		[MOVE_INFO.ENPASSANT]: (_, x_turn, move) => {
+			this.board.CapturePiece(PIECES.PAWN, x_turn, move.target_square + PAWN_MOVE_DIRECTION[x_turn])
+			move.captured = PIECES.PAWN
 		},
-		[MOVE_INFO.CASTLE]: (turn, _, _2, side) => {
-			const indices = CASTLE_RIGHTS_ROOK_SQUARE_INDEX[side]
+		[MOVE_INFO.CASTLE]: (turn, _, move) => {
+			const indices = CASTLE_RIGHTS_ROOK_SQUARE_INDEX[move.type]
 			this.board.MakeMove(PIECES.ROOK, turn, indices[0], indices[1])
-
-			return -1
 		},
-		[MOVE_INFO.PROMOTION]: (turn, _, target_square, promotion_piece) => {
-			this.board.PromotePawn(promotion_piece, turn, target_square)
-			return -1
+		[MOVE_INFO.PROMOTION]: (turn, _, move) => {
+			this.board.PromotePawn(move.type, turn, move.target_square)
 		},
 	}
 
 	undo_move_info_funcs = {
 		[MOVE_INFO.DOUBLE_PAWN_PUSH]: () => {},
-		[MOVE_INFO.ENPASSANT]: (_, x_turn, _1, target_square) => {
-			this.board.UndoCapturedPiece(PIECES.PAWN, x_turn, target_square + PAWN_MOVE_DIRECTION[x_turn])
-
-			return PIECES.PAWN
+		[MOVE_INFO.ENPASSANT]: (_, x_turn, move) => {
+			this.board.UndoCapturedPiece(PIECES.PAWN, x_turn, move.target_square + PAWN_MOVE_DIRECTION[x_turn])
 		},
-		[MOVE_INFO.CASTLE]: (turn, _, _1, _2, side) => {
-			const indices = CASTLE_RIGHTS_ROOK_SQUARE_INDEX[side]
+		[MOVE_INFO.CASTLE]: (turn, _, move) => {
+			const indices = CASTLE_RIGHTS_ROOK_SQUARE_INDEX[move.type]
 			this.board.UndoMove(PIECES.ROOK, turn, indices[0], indices[1])
-
-			return -1
 		},
-		[MOVE_INFO.PROMOTION]: (turn, _, _1, target_square, promotion_piece) => {
-			this.board.UndoPromotion(promotion_piece, turn, target_square)
+		[MOVE_INFO.PROMOTION]: (turn, _, move) => {
+			this.board.UndoPromotion(move.type, turn, move.target_square)
 		},
 	}
 
@@ -115,12 +108,12 @@ export class ChessEngineClass {
 			fen_split[2].split("").forEach((char) => {
 				this.caslte_rights |= CASTLE_RIGHTS[char]
 			})
-		}
+		} else this.caslte_rights = 0
 
 		//* Possible En Passant targets
 		if (fen_split[3] !== "-") {
 			this.enpassant = INDEX_FROM_NOTATION[fen_split[3].toLowerCase()]
-		}
+		} else this.enpassant = -1
 
 		//TODO: Half move clock
 
@@ -148,12 +141,37 @@ export class ChessEngineClass {
 		console.log(board_string)
 	}
 
+	PrintTurnPosition(turn) {
+		const board = this.board
+
+		let board_string = "     a   b   c   d   e   f   g   h\n"
+		board_string += "   +———+———+———+———+———+———+———+———+\n"
+
+		for (let rank = 7; rank >= 0; rank--) {
+			for (let file = 0; file < 8; file++) {
+				if (file === 0) board_string += ` ${rank + 1} `
+
+				const square_index = rank * 8 + file
+				const is_turn = board.color[turn].isOccupied(square_index)
+				const piece = is_turn ? board.GetPieceTypeFromSquareIndex(square_index) : false
+
+				board_string += `| ${piece || " "} `
+				if (file === 7) board_string += `| ${rank + 1}`
+			}
+
+			board_string += "\n   +———+———+———+———+———+———+———+———+\n"
+		}
+
+		board_string += "     a   b   c   d   e   f   g   h\n"
+		console.log(board_string)
+	}
+
 	ResetMoveGeneration() {
 		this.active_king_square_index = this.board.GetKingSquareIndex(this.turn)
 
 		this.opponent_attack_mask.Zero()
 		this.check_ray_mask.Zero()
-		this.pin_ray_mask.Zero()
+		this.pin_rays = []
 
 		this.double_check = false
 		this.in_check = false
@@ -314,12 +332,12 @@ export class ChessEngineClass {
 				const { x_ray: pinner_ray, attack_mask: pinner_am } = this[get_x_ray_attack_mask](square_index)
 				const pinner_am_raw = pinner_am.Raw()
 
-				this.pin_ray_mask.Or(
-					(x_ray_raw & pinner_am_raw) |
-						(attack_mask_raw & pinner_am_raw) |
-						(attack_mask_raw & pinner_ray.Raw())
+				const pinned_piece = attack_mask_raw & pinner_am_raw
+				const ray = new BitboardClass((x_ray_raw & pinner_am_raw) | (attack_mask_raw & pinner_ray.Raw())).Set(
+					square_index
 				)
-				this.pin_ray_mask.Set(square_index)
+
+				this.pin_rays[pinner_ray.GetLSBIndex(pinned_piece)] = ray.Raw()
 			})
 		}
 	}
@@ -335,7 +353,11 @@ export class ChessEngineClass {
 		const queens_bitboard = queens.Raw()
 
 		if (!king_bitbaord) {
+			console.log(king_bitbaord)
+
 			this.PrintBoard()
+
+			throw new Error()
 		}
 
 		//* Opponent king moves
@@ -346,9 +368,6 @@ export class ChessEngineClass {
 
 		//* Diagonal check and pin rays
 		this.GenerateCheckAndPinRays(board[PIECES.BISHOP][x_turn].Raw() | queens_bitboard, false)
-
-		//* Remove's the king square index from pin ray mask
-		this.pin_ray_mask.Clear(this.active_king_square_index)
 
 		//* Knight jumps
 		{
@@ -410,18 +429,31 @@ export class ChessEngineClass {
 	//* Does not work for pawn push
 	IsolateMaskFromCheckOrPinRay(square_index, mask) {
 		if (this.in_check) mask.And(this.check_ray_mask.Raw())
-		if (this.pin_ray_mask.isOccupied(square_index)) mask.And(this.pin_ray_mask.Raw())
+
+		const ray = this.pin_rays[square_index]
+		if (ray) mask.And(ray)
+	}
+
+	isPawnPushOnRay(square_index, target_square) {
+		if (this.in_check && this.check_ray_mask.isOccupied(target_square)) return true
+
+		const ray = this.pin_rays[square_index]
+		if (!ray) return true
+		if (ray & (1n << BigInt(target_square))) return true
+
+		return false
 	}
 
 	GenerateKingMoves(moves = []) {
 		const board = this.board
+		const turn = this.turn
 
 		const square_index = this.active_king_square_index
-		const opponent_attack_mask = this.opponent_attack_mask.Raw()
+		const opponent_attack_mask = ~this.opponent_attack_mask.Raw()
 
 		const king_mask = new BitboardClass(king_masks[square_index])
-		king_mask.And(~board.color[this.turn].Raw())
-		king_mask.And(~opponent_attack_mask)
+		king_mask.And(~board.color[turn].Raw())
+		king_mask.And(opponent_attack_mask)
 
 		king_mask.GetBitIndices().forEach((target_square) => {
 			moves.push(new Move(square_index, target_square, PIECES.KING))
@@ -429,14 +461,16 @@ export class ChessEngineClass {
 
 		//* Castling moves
 		if (this.in_check) return
-		const occupancies = ~(opponent_attack_mask | board.occupancies.Raw())
+		const occupancies = ~board.occupancies.Raw()
+		const rook = board[PIECES.ROOK][turn].Raw()
 
-		CASTLE_EMPTY_OCCUPANCIES.forEach(([castle_right, castle_occupancies]) => {
-			const attacked_mask = CASTLE_ATTACKED_MASK[castle_right]
+		CASTLE_EMPTY_OCCUPANCIES[turn].forEach(([castle_right, castle_empty_occupancies]) => {
+			const castle_attacked_mask = CASTLE_ATTACKED_MASK[castle_right]
 
 			if (!(this.caslte_rights & castle_right)) return
-			if ((castle_occupancies & occupancies) !== castle_occupancies) return
-			if ((attacked_mask & occupancies) !== attacked_mask) return
+			if (!(rook & CASLTE_ROOK_POSITIONS[castle_right])) return
+			if ((castle_empty_occupancies & occupancies) !== castle_empty_occupancies) return
+			if ((castle_attacked_mask & opponent_attack_mask) !== castle_attacked_mask) return
 
 			moves.push(
 				new Move(square_index, CASTLE_SQUARE_INDEX[castle_right], PIECES.KING, MOVE_INFO.CASTLE, castle_right)
@@ -450,11 +484,8 @@ export class ChessEngineClass {
 		const x_turn = this.x_turn
 		const promotion_mask = PAWN_PROMOTION_MASK[turn]
 
-		const pin_ray_mask = this.pin_ray_mask
 		const check_ray_mask = this.check_ray_mask
-
 		const { single_push, double_push } = this.GetPawnPushMask()
-		const pinned_pawns = new BitboardClass(board[PIECES.PAWN][turn].Raw() & pin_ray_mask.Raw())
 
 		if (this.in_check) {
 			const raw = check_ray_mask.Raw()
@@ -463,30 +494,29 @@ export class ChessEngineClass {
 			double_push.And(raw)
 		}
 
-		let promotion = promotion_mask & single_push.Raw()
+		const push_promotion = promotion_mask & single_push.Raw()
 		const opposite_move_direction = PAWN_MOVE_DIRECTION[x_turn]
 
-		single_push.And(~promotion)
+		new BitboardClass(push_promotion).GetBitIndices().forEach((target_index) => {
+			const square_index = target_index + opposite_move_direction
+			if (!this.isPawnPushOnRay(square_index, target_index)) return
+
+			PROMOTION_PIECES.forEach((promotion_piece) => {
+				moves.push(new Move(square_index, target_index, PIECES.PAWN, MOVE_INFO.PROMOTION, promotion_piece))
+			})
+		})
+
+		single_push.And(~push_promotion)
 		single_push.GetBitIndices().forEach((target_index) => {
 			const square_index = target_index + opposite_move_direction
-
-			//* Check's if square index is pinned
-			if (pinned_pawns.isOccupied(square_index)) {
-				//* Return's if the target square is not on the pin ray mask
-				if (!pin_ray_mask.isOccupied(target_index)) return
-			}
+			if (!this.isPawnPushOnRay(square_index, target_index)) return
 
 			moves.push(new Move(square_index, target_index, PIECES.PAWN))
 		})
 
 		double_push.GetBitIndices().forEach((target_index) => {
 			const square_index = target_index + opposite_move_direction * 2
-
-			//* Check's if square index is pinned
-			if (pinned_pawns.isOccupied(square_index)) {
-				//* Return's if the target square is not on the pin ray mask
-				if (!pin_ray_mask.isOccupied(target_index)) return
-			}
+			if (!this.isPawnPushOnRay(square_index, target_index)) return
 
 			moves.push(new Move(square_index, target_index, PIECES.PAWN, MOVE_INFO.DOUBLE_PAWN_PUSH))
 		})
@@ -495,19 +525,17 @@ export class ChessEngineClass {
 			const capture_mask = this.GetPawnCaptureMask(square_index)
 			this.IsolateMaskFromCheckOrPinRay(square_index, capture_mask)
 
-			promotion |= promotion_mask & capture_mask.Raw()
-			capture_mask.And(~promotion)
+			const capture_promotion = new BitboardClass(promotion_mask & capture_mask.Raw())
+			capture_mask.And(~capture_promotion.Raw())
 
 			capture_mask.GetBitIndices().forEach((target_index) => {
 				moves.push(new Move(square_index, target_index, PIECES.PAWN))
 			})
-		})
 
-		new BitboardClass(promotion).GetBitIndices().forEach((target_index) => {
-			const square_index = target_index + opposite_move_direction
-
-			PROMOTION_PIECES.forEach((promotion_piece) => {
-				moves.push(new Move(square_index, target_index, PIECES.PAWN, MOVE_INFO.PROMOTION, promotion_piece))
+			capture_promotion.GetBitIndices().forEach((target_index) => {
+				PROMOTION_PIECES.forEach((promotion_piece) => {
+					moves.push(new Move(square_index, target_index, PIECES.PAWN, MOVE_INFO.PROMOTION, promotion_piece))
+				})
 			})
 		})
 
@@ -545,6 +573,7 @@ export class ChessEngineClass {
 
 			if (!can_check_king) {
 				indices.forEach((square_index) => {
+					if (!this.isPawnPushOnRay(square_index, enpassant)) return
 					moves.push(new Move(square_index, enpassant, PIECES.PAWN, MOVE_INFO.ENPASSANT))
 				})
 			}
@@ -608,6 +637,7 @@ export class ChessEngineClass {
 		this.ResetMoveGeneration()
 		this.CalculateAttackMask()
 
+		//* Generate possible moves
 		this.GenerateKingMoves(moves)
 
 		if (this.double_check) return moves
@@ -641,17 +671,21 @@ export class ChessEngineClass {
 		}
 
 		board.MakeMove(piece_moved, turn, start_square, target_square)
-		if (move_info > 0) move.captured = this.make_move_info_funcs[move_info](turn, x_turn, target_square, move.type)
+		if (move_info > 0) this.make_move_info_funcs[move_info](turn, x_turn, move)
 
 		this.move_history.push(move)
 		this.turn = x_turn
 		this.x_turn = turn
 
-		if (piece_moved === PIECES.ROOK || piece_moved === PIECES.KING) {
-			const castle_right = CASTLE_PIECE_MOVED[start_square]
+		if (piece_moved === PIECES.ROOK) {
+			const castle_right = CASTLE_ROOK_MOVED[start_square]
 			if (!castle_right) return
 
 			this.caslte_rights &= ~castle_right
+		} else if (piece_moved === PIECES.KING) {
+			const castle_rights = CASTLE_KING_MOVED[turn]
+			this.caslte_rights &= castle_rights[0]
+			this.caslte_rights &= castle_rights[1]
 		}
 	}
 
@@ -672,9 +706,12 @@ export class ChessEngineClass {
 
 		board.UndoMove(move.piece, turn, start_square, target_square)
 
-		if (move_info > 0) {
-			this.undo_move_info_funcs[move_info](turn, x_turn, start_square, target_square, move.type)
-		} else if (piece_captured !== -1) board.UndoCapturedPiece(piece_captured, x_turn, target_square)
+		if (move_info > 0) this.undo_move_info_funcs[move_info](turn, x_turn, move)
+		if (piece_captured !== -1) {
+			if ((move_info & MOVE_INFO.ENPASSANT) === 0) {
+				board.UndoCapturedPiece(piece_captured, x_turn, target_square)
+			}
+		}
 
 		this.turn = turn
 		this.x_turn = x_turn

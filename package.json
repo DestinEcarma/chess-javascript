@@ -8,5 +8,8 @@
 	},
 	"author": "Destin Ecarma",
 	"license": "MIT",
-	"type": "module"
+	"type": "module",
+	"dependencies": {
+		"prompt-sync": "^4.2.0"
+	}
 }

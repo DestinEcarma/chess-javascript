@@ -1,32 +1,30 @@
 import { ChessEngineClass } from "./chess-engine.js"
 import { StopWatch } from "./helper.js"
 
+async function PrintNotationNodes(notation, nodes) {
+	console.log(`${notation}: ${nodes}`)
+}
+
 export class Benchmark {
-	constructor(fen_string) {
+	constructor() {
 		this.chess_engine = new ChessEngineClass()
-		this.chess_engine.LoadPosition(fen_string)
-		this.chess_engine.PrintBoard()
+		this.chess_engine.LoadPosition()
 	}
 
-	Perft(depth, fen_string) {
-		if (fen_string) this.chess_engine.LoadPosition(fen_string)
-
+	Perft(depth) {
 		const stop_watch = StopWatch()
-
 		let nodes = 0
 
 		const chess_engine = this.chess_engine
 		const moves = chess_engine.GenerateAllPossibleMoves()
 
 		for (let move of moves) {
-			let show = false
-
-			chess_engine.MakeMove(move, show)
-			const move_nodes = this._Perft(depth - 1, show)
+			chess_engine.MakeMove(move)
+			const move_nodes = this._Perft(depth - 1)
 			chess_engine.UndoMove()
 
 			nodes += move_nodes
-			console.log(`${move.Notation()}: ${move_nodes}`)
+			PrintNotationNodes(move.Notation(), move_nodes)
 		}
 
 		const seconds = stop_watch()

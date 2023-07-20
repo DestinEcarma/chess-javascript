@@ -14,6 +14,17 @@ export class BoardClass {
 		this[PIECES.QUEEN] = this.CreateSides()
 	}
 
+	ClearBoard() {
+		this.occupancies.Zero()
+		this.color[COLOR.WHITE].Zero()
+		this.color[COLOR.BLACK].Zero()
+
+		for (let piece = 0; piece < 6; piece++) {
+			this[piece][COLOR.WHITE].Zero()
+			this[piece][COLOR.BLACK].Zero()
+		}
+	}
+
 	MakeMove(piece, turn, start_square, target_square) {
 		const occupancies = this.occupancies
 		const ally = this.color[turn]
@@ -53,6 +64,8 @@ export class BoardClass {
 	}
 
 	LoadPiecePlacement(fen) {
+		this.ClearBoard()
+
 		let [file, rank] = [0, 7]
 
 		fen.split("").forEach((char) => {
